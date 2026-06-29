@@ -5,7 +5,6 @@ import { DEFAULT_SIGNERS } from '@/lib/config';
 
 export async function GET() {
   try {
-    await ensureSheets();
     const data = await readSheet(CONFIG.SHEETS.SIGNERS);
     const list = [];
     for (let i = 1; i < data.length; i++) {

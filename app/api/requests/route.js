@@ -62,7 +62,6 @@ async function generateDocNumber(docType, departemen) {
 
 export async function GET(req) {
   try {
-    await ensureSheets();
     const session = await getSession();
     if (!session.user) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     

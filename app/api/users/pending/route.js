@@ -6,7 +6,6 @@ import { getSession } from '@/lib/auth';
 
 export async function GET() {
   try {
-    await ensureSheets();
     const session = await getSession();
     if (!session.user || String(session.user.role).trim() !== 'admin') {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });

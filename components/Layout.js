@@ -45,7 +45,7 @@ export default function Layout({ user, children }) {
     // Panggil sekali saat load
     fetchBadge();
     // Set interval untuk cek setiap 30 detik (real-time notification)
-    const interval = setInterval(fetchBadge, 30000);
+    const interval = setInterval(fetchBadge, 120000);
 
     // Bersihkan interval saat komponen unmount
     return () => clearInterval(interval);

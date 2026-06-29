@@ -4,7 +4,6 @@ import { CONFIG } from '@/lib/config';
 
 export async function GET() {
   try {
-    await ensureSheets();
     const data = await readSheet(CONFIG.SHEETS.JENIS_SURAT);
     const list = [];
     for (let i = 1; i < data.length; i++) {
