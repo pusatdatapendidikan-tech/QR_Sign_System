@@ -23,32 +23,32 @@ export default function Layout({ user, children }) {
   useEffect(() => {
     if (!user) return;
 
-    // Fungsi untuk mengambil jumlah notifikasi (permintaan yang perlu ditindaklanjuti)
     const fetchBadge = async () => {
       try {
         const res = await fetch(`/api/dashboard?role=${user.role}&userName=${user.username}&signerRole=${user.signerRole||''}`).then(r => r.json());
         if (res.success) {
           if (user.role === 'admin') {
-            // Admin: badge muncul jika ada permintaan berstatus Menunggu
             setBadgeCount(res.data.menunggu || 0);
           } else if (user.role === 'atasan') {
-            // Atasan: badge muncul jika ada permintaan berstatus Diteruskan
             setBadgeCount(res.data.diteruskan || 0);
           } else if (user.role === 'user') {
-            // User: badge muncul jika ada surat yang Disetujui tapi belum dibuka
             setBadgeCount(res.data.disetujui || 0);
           }
         }
       } catch (e) {}
     };
 
-    // Panggil sekali saat load
     fetchBadge();
-    // Set interval untuk cek setiap 30 detik (real-time notification)
-    const interval = setInterval(fetchBadge, 120000);
+    const interval = setInterval(fetchBadge, 60000); // Cek setiap 60 detik
 
-    // Bersihkan interval saat komponen unmount
-    return () => clearInterval(interval);
+    // TAMBAHKAN INI: Listener agar badge bisa di-refresh secara instan dari halaman lain
+    const handleBadgeUpdate = () => fetchBadge();
+    window.addEventListener('badge-update', handleBadgeUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('badge-update', handleBadgeUpdate);
+    };
   }, [user]);
 
   const navItems = [

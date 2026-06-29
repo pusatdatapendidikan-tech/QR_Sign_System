@@ -54,6 +54,7 @@ export default function PermintaanPage() {
       await fetch(`/api/requests/${id}/read`, { method: 'POST' });
       // Update state lokal agar tombol/ikon langsung berubah tanpa reload
       setRequests(prev => prev.map(r => r.id === id ? { ...r, readByRequester: true } : r));
+      window.dispatchEvent(new Event('badge-update'));
     } catch (e) {}
   };
 
@@ -178,7 +179,11 @@ export default function PermintaanPage() {
           body: JSON.stringify({ forwarderName: user.name, targetSigner: req.targetSigner }),
         }).then(r => r.json());
         Swal.close();
-        if (res.success) { Swal.fire({icon:'success', title:'Diteruskan', text:res.message, timer:1500, showConfirmButton:false}); loadRequests(user); }
+        if (res.success) { 
+          Swal.fire({icon:'success', title:'Diteruskan', text:res.message, timer:1500, showConfirmButton:false}); 
+          loadRequests(user); 
+          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+        }
         else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
       }
     });
@@ -194,7 +199,11 @@ export default function PermintaanPage() {
             body: JSON.stringify({ approverName: user.name }),
           }).then(r => r.json());
           Swal.close();
-          if (res.success) { Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:1500, showConfirmButton:false}); loadRequests(user); }
+          if (res.success) { 
+          Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:1500, showConfirmButton:false}); 
+          loadRequests(user); 
+          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+        }
           else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
         }
       });
@@ -213,7 +222,11 @@ export default function PermintaanPage() {
           body: JSON.stringify({ rejecterName: `${user.name} (${user.role === 'atasan' ? 'Atasan' : 'Admin'})`, reason: r.value || '-' }),
         }).then(r => r.json());
         Swal.close();
-        if (res.success) { Swal.fire({icon:'success', title:'Ditolak', text:res.message, timer:1500, showConfirmButton:false}); loadRequests(user); }
+        if (res.success) { 
+          Swal.fire({icon:'success', title:'Ditolak', text:res.message, timer:1500, showConfirmButton:false}); 
+          loadRequests(user); 
+          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+        }
         else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
       }
     });
@@ -226,7 +239,11 @@ export default function PermintaanPage() {
           Swal.fire({ title:'Menghapus...', allowOutsideClick:false, didOpen: () => Swal.showLoading() });
           const res = await fetch(`/api/requests/${id}`, { method:'DELETE' }).then(r => r.json());
           Swal.close();
-          if (res.success) { Swal.fire({icon:'success', title:'Dihapus', text:res.message, timer:1500, showConfirmButton:false}); loadRequests(user); }
+          if (res.success) { 
+          Swal.fire({icon:'success', title:'Dihapus', text:res.message, timer:1500, showConfirmButton:false}); 
+          loadRequests(user); 
+          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+        }
           else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
         }
       });
