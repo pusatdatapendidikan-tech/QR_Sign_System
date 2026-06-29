@@ -40,7 +40,7 @@ async function generateDocNumber(docType, departemen) {
   const year = now.getFullYear();
   const counterKey = departemen ? `${docType} - ${departemen}` : docType;
   
-  const nomorData = await readSheet(CONFIG.SHEETS.NOMOR_SURAT);
+  const nomorData = await readSheet(CONFIG.SHEETS.NOMOR_SURAT, false);
   let nextNum = 1;
   let foundRow = -1;
   for (let i = 1; i < nomorData.length; i++) {
