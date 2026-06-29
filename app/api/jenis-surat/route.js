@@ -1,0 +1,19 @@
+import { NextResponse } from 'next/server';
+import { ensureSheets, readSheet } from '@/lib/googleSheets';
+import { CONFIG } from '@/lib/config';
+
+export async function GET() {
+  try {
+    await ensureSheets();
+    const data = await readSheet(CONFIG.SHEETS.JENIS_SURAT);
+    const list = [];
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) {
+        list.push({ nama: data[i][0].trim(), format: (data[i][1] || '').trim() });
+      }
+    }
+    return NextResponse.json(list);
+  } catch (e) {
+    return NextResponse.json([]);
+  }
+}
