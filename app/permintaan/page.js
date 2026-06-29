@@ -200,10 +200,11 @@ export default function PermintaanPage() {
           }).then(r => r.json());
           Swal.close();
           if (res.success) { 
-          Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:1500, showConfirmButton:false}); 
-          loadRequests(user); 
-          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
-        }
+            Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:1500, showConfirmButton:false}); 
+            loadRequests(user); 
+            // BARIS INI YANG MEMBUAT BADGE LANGSUNG HILANG SAAT SETUJUI
+            window.dispatchEvent(new Event('badge-update')); 
+          }
           else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
         }
       });
