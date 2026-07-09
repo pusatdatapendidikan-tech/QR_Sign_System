@@ -13,7 +13,7 @@ export async function GET(req) {
     const userName = searchParams.get('userName') || session.user.username;
     const signerRole = searchParams.get('signerRole') || session.user.signerRole || '';
     
-    const data = await readSheet(CONFIG.SHEETS.REQUESTS);
+    const data = await readSheet(CONFIG.SHEETS.REQUESTS, false);
     let total = 0, menunggu = 0, diteruskan = 0, disetujui = 0, ditolak = 0;
     
     for (let i = 1; i < data.length; i++) {

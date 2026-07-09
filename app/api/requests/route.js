@@ -83,7 +83,7 @@ export async function GET(req) {
     const userName = searchParams.get('userName') || session.user.username;
     const signerRole = searchParams.get('signerRole') || session.user.signerRole || '';
     
-    const data = await readSheet(CONFIG.SHEETS.REQUESTS);
+    const data = await readSheet(CONFIG.SHEETS.REQUESTS, false); // false = matikan server cache
     const requests = [];
     
     for (let i = 1; i < data.length; i++) {
