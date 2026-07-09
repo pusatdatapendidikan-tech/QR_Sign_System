@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureSheets, readSheet, updateCell, clearSheetCache, auth as googleAuth } from '@/lib/googleSheets';
+import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
 import { google } from 'googleapis';
@@ -54,7 +54,7 @@ export async function POST(req, { params }) {
         
         if (fileUrl && fileUrl.includes('docs.google.com')) {
           try {
-            const docs = google.docs({ version: 'v1', auth: googleAuth });
+            const docs = google.docs({ version: 'v1', auth: getAuth() });
             const docIdMatch = fileUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
             
             if (docIdMatch) {
