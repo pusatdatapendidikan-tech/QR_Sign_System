@@ -519,9 +519,15 @@ export default function PermintaanPage() {
                           <button className="btn-action btn-action-reject" title="Tolak" onClick={() => doReject(r.id)}><i className="bi bi-x"></i></button>
                         </>
                       )}
-                      {r.fileUrl && r.fileUrl !== '-' && (
-                        <a href={r.fileUrl} target="_blank" className="btn-action btn-action-view" title="Lihat File"><i className="bi bi-file-earmark"></i></a>
-                      )}
+                        {r.fileUrl && r.fileUrl !== '-' && (
+                          <button 
+                            onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
+                            className="btn-action btn-action-view" 
+                            title="Lihat File"
+                          >
+                            <i className="bi bi-file-earmark"></i>
+                          </button>
+                        )}
                       {user.role === 'admin' && <button className="btn-action btn-action-delete" title="Hapus" onClick={() => doDelete(r.id)}><i className="bi bi-trash"></i></button>}
                     </div>
                   </td>

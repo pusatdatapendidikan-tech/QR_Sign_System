@@ -29,7 +29,7 @@ export async function GET(req) {
         else if (st === 'Diteruskan') diteruskan++;
         else if (st === 'Disetujui') {
           if (role === 'user') {
-            const isRead = data[i][21] === true || data[i][21] === 'true';
+            const isRead = data[i][21] === true || String(data[i][21]).toUpperCase() === 'TRUE';
             if (!isRead) disetujui++;
           } else {
             disetujui++;

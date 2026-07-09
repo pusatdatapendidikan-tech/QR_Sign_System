@@ -8,7 +8,7 @@ export async function POST(req, { params }) {
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === params.id) {
         // Tandai kolom 22 (read_by_requester) menjadi true
-        await updateCell(CONFIG.SHEETS.REQUESTS, i + 1, 22, true);
+        await updateCell(CONFIG.SHEETS.REQUESTS, i + 1, 22, "TRUE");
         
         // HAPUS CACHE AGAR BADGE LANGSUNG UPDATE
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
