@@ -119,6 +119,20 @@ export default function PermintaanPage() {
     if (!form.jenisSurat) { Swal.fire({icon:'warning', title:'Perhatian', text:'Pilih jenis surat', confirmButtonColor:'#1d4ed8'}); return; }
     if (form.jenisSurat === 'Internal Memo/IM' && !form.departemen) { Swal.fire({icon:'warning', title:'Perhatian', text:'Pilih departemen', confirmButtonColor:'#1d4ed8'}); return; }
     if (!form.tujuanTtd) { Swal.fire({icon:'warning', title:'Perhatian', text:'Pilih tujuan tanda tangan', confirmButtonColor:'#1d4ed8'}); return; }
+
+    const confirmAccess = await Swal.fire({
+  title: 'Konfirmasi Akses Dokumen',
+  html: 'Apakah Anda sudah mengatur Sharing dokumen ke <strong>Anyone with the link = Editor</strong>?<br/><br/><small>Jika belum, QR Code tidak bisa disisipkan.</small>',
+  icon: 'warning',
+  showCancelButton: true,
+  confirmButtonText: 'Ya, Sudah Editor!',
+  cancelButtonText: 'Belum, Cek Dulu',
+  confirmButtonColor: '#059669'
+});
+
+if (!confirmAccess.isConfirmed) {
+  return; // Batalkan submit jika user belum yakin
+}
     
     Swal.fire({ title:'Mengirim...', allowOutsideClick:false, didOpen: () => Swal.showLoading() });
     
@@ -426,9 +440,20 @@ export default function PermintaanPage() {
                   </div>
                   <div className="col-12">
                     <label className="form-label">Link Google Docs (Template Surat)</label>
-                    <div style={{background:'#f0f9ff',border:'1px solid #bae6fd',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
-                      <p style={{fontSize:12,color:'#0369a1',margin:0,lineHeight:1.6}}><i className="bi bi-info-circle me-1"></i>Pastikan template surat memiliki penanda <strong style={{background:'#dbeafe',padding:'1px 6px',borderRadius:4}}>{'{'}{'}QR_CODE{'}{'}'}</strong> di kolom tanda tangan.</p>
-                    </div>
+                      <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
+                        <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight: 600}}>
+                          <i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!
+                        </p>
+                        <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
+                          1. Klik <strong>Share/Bagikan</strong> di Google Docs Anda.<br/>
+                          2. Ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
+                          <em style={{fontSize:11, opacity:0.8}}>(Jika tidak diatur ke Editor, sistem gagal menyisipkan QR Code saat disetujui)</em>
+                        </p>
+                        <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
+                        <p style={{fontSize:12,color:'#0369a1',margin:0,lineHeight:1.6}}>
+                          <i className="bi bi-info-circle me-1"></i>Pastikan template surat memiliki penanda <strong style={{background:'#dbeafe',padding:'1px 6px',borderRadius:4}}>{'{'}{'}QR_CODE{'}{'}'}</strong> di area tanda tangan.
+                        </p>
+                      </div>
                     <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
                   </div>
                 </div>
