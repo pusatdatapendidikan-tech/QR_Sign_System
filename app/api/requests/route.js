@@ -41,20 +41,33 @@ async function generateDocNumber(docType, departemen) {
   const counterKey = departemen ? `${docType} - ${departemen}` : docType;
   
   const nomorData = await readSheet(CONFIG.SHEETS.NOMOR_SURAT, false);
-  let nextNum = 1;
-  let foundRow = -1;
+  let maxNum = 0;
+  let currentMonthRow = -1;
+  
+  // ✅ FIX: Cari nomor tertinggi di tahun yang sama, abaikan bulan
   for (let i = 1; i < nomorData.length; i++) {
-    if (nomorData[i][0] === counterKey && parseInt(nomorData[i][1]) === month && parseInt(nomorData[i][2]) === year) {
-      nextNum = (parseInt(nomorData[i][3]) || 0) + 1;
-      foundRow = i + 1;
-      break;
+    if (nomorData[i][0] === counterKey && parseInt(nomorData[i][2]) === year) {
+      const currentNum = parseInt(nomorData[i][3]) || 0;
+      if (currentNum > maxNum) {
+        maxNum = currentNum;
+      }
+      
+      // Cek juga apakah sudah ada record untuk bulan saat ini
+      if (parseInt(nomorData[i][1]) === month) {
+        currentMonthRow = i + 1; // Simpan baris bulan saat ini untuk di-update nanti
+      }
     }
   }
   
-  if (foundRow > 0) {
-    await updateCell(CONFIG.SHEETS.NOMOR_SURAT, foundRow, 4, nextNum);
+  // Lanjutkan nomor dari yang tertinggi
+  const nextNum = maxNum + 1;
+  
+  if (currentMonthRow > 0) {
+    // Jika di bulan ini sudah ada barisnya, update counternya saja
+    await updateCell(CONFIG.SHEETS.NOMOR_SURAT, currentMonthRow, 4, nextNum);
   } else {
-    await appendRow(CONFIG.SHEETS.NOMOR_SURAT, [counterKey, month, year, 1]);
+    // Jika ini permintaan pertama di bulan baru, buat baris baru dengan counter lanjutan
+    await appendRow(CONFIG.SHEETS.NOMOR_SURAT, [counterKey, month, year, nextNum]);
   }
   
   return generateDocumentNumber(prefix, month, year, nextNum);

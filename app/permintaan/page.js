@@ -74,22 +74,32 @@ export default function PermintaanPage() {
       if (!dep) { setForm({...newForm, nomorSurat:'(kode dept belum diatur)'}); return; }
       const prefix = dep.kode + '/IM';
       const counterKey = `${docType} - ${dept}`;
-      let nextNum = 1;
+
+      // ✅ FIX: Cari nomor tertinggi di tahun berjalan, abaikan bulan
+      let maxNum = 0;
       for (const ns of nomorSurat) {
-        if (ns.jenisSurat === counterKey && ns.bulan === month && ns.tahun === year) {
-          nextNum = (ns.nomorTerakhir || 0) + 1; break;
+        if (ns.jenisSurat === counterKey && ns.tahun === year) {
+          const currentNum = parseInt(ns.nomorTerakhir) || 0;
+          if (currentNum > maxNum) maxNum = currentNum;
         }
       }
+      const nextNum = maxNum + 1;
+
       newForm.nomorSurat = String(nextNum).padStart(3,'0') + '/' + prefix + '/' + ROMAWI[month] + '/' + year;
     } else {
       const found = jenisSurat.find(j => j.nama === docType);
       if (!found || !found.format || found.format === 'IM') { setForm({...newForm, nomorSurat:'(format belum diatur)'}); return; }
-      let nextNum = 1;
+
+      // ✅ FIX: Cari nomor tertinggi di tahun berjalan, abaikan bulan
+      let maxNum = 0;
       for (const ns of nomorSurat) {
-        if (ns.jenisSurat === docType && ns.bulan === month && ns.tahun === year) {
-          nextNum = (ns.nomorTerakhir || 0) + 1; break;
+        if (ns.jenisSurat === docType && ns.tahun === year) {
+          const currentNum = parseInt(ns.nomorTerakhir) || 0;
+          if (currentNum > maxNum) maxNum = currentNum;
         }
       }
+      const nextNum = maxNum + 1;
+
       newForm.nomorSurat = String(nextNum).padStart(3,'0') + '/' + found.format + '/' + ROMAWI[month] + '/' + year;
     }
     setForm(newForm);
