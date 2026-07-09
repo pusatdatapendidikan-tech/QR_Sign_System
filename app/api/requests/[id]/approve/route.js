@@ -49,23 +49,19 @@ export async function POST(req, { params }) {
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 15, new Date().toISOString());
         
         // 2. Proses Replace {{QR_CODE}} dengan Gambar Barcode/QR di Google Docs
+        // 2. Proses Replace {{QR_CODE}} dengan Gambar Barcode/QR di Google Docs
+        let qrWarning = ''; // Tambahkan variabel untuk pesan peringatan
+        
         if (fileUrl && fileUrl.includes('docs.google.com')) {
           try {
-            // Inisialisasi Google Docs API menggunakan auth dari googleSheets.js
             const docs = google.docs({ version: 'v1', auth: googleAuth });
-            
-            // Extract Document ID dari URL Google Docs
             const docIdMatch = fileUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            
             if (docIdMatch) {
               const docId = docIdMatch[1];
-              
-              // [PENTING] Ganti dengan domain Vercel Anda yang sebenarnya untuk halaman verifikasi
-              const verifyUrl = `https://DOMAIN-VERCEL-ANDA.vercel.app/verify/${params.id}`; 
-              
-              // Gunakan API publik untuk generate gambar QR Code (Ukuran 300x300)
+              const verifyUrl = `https://DOMAIN-VERCEL-ANDA.vercel.app/verify/${params.id}`; // GANTI DOMAIN ANDA
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verifyUrl)}`;
 
-              // Step A: Replace teks {{QR_CODE}} menjadi [QR_PLACEHOLDER] agar tidak terpecah oleh Google Docs
               await docs.documents.batchUpdate({
                 documentId: docId,
                 requestBody: {
@@ -78,12 +74,10 @@ export async function POST(req, { params }) {
                 }
               });
 
-              // Step B: Ambil struktur dokumen terbaru untuk menemukan index placeholder
               const updatedDoc = await docs.documents.get({ documentId: docId });
               const range = findTextRange(updatedDoc.data, '[QR_PLACEHOLDER]');
 
               if (range) {
-                // Step C: Insert gambar QR Code di index placeholder
                 await docs.documents.batchUpdate({
                   documentId: docId,
                   requestBody: {
@@ -92,13 +86,9 @@ export async function POST(req, { params }) {
                         insertInlineImage: {
                           location: { index: range.startIndex },
                           uri: qrImageUrl,
-                          objectSize: { 
-                            height: { magnitude: 120, unit: 'PT' }, // Ukuran tinggi QR di dokumen
-                            width: { magnitude: 120, unit: 'PT' }   // Ukuran lebar QR di dokumen
-                          }
+                          objectSize: { height: { magnitude: 120, unit: 'PT' }, width: { magnitude: 120, unit: 'PT' } }
                         }
                       },
-                      // Step D: Hapus teks [QR_PLACEHOLDER] (Index digeser +1 karena gambar baru saja masuk)
                       {
                         deleteContentRange: {
                           range: { startIndex: range.startIndex + 1, endIndex: range.endIndex + 1 }
@@ -107,21 +97,28 @@ export async function POST(req, { params }) {
                     ]
                   }
                 });
+              } else {
+                // Jika teks placeholder tidak ditemukan di dokumen
+                qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dalam dokumen.';
               }
             }
           } catch (docError) {
-            // Log error jika gagal insert QR, tapi tetap lanjutkan proses approve
+            // Jika gagal insert (kemungkinan besar masalah Permission/Share)
             console.error('Gagal insert QR ke Google Docs:', docError.message);
+            qrWarning = '\\n\\n⚠️ Peringatan: Gagal menyisipkan QR Code. Pastikan dokumen sudah di-share ke "Anyone with the link = Editor" dan Google Docs API sudah aktif.';
           }
         }
 
         // Bersihkan cache
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
         
-        return NextResponse.json({ success: true, message: 'Permintaan berhasil disetujui dan QR Code ditambahkan' });
+        // Kirim response dengan pesan sukses + peringatan QR (jika ada)
+        return NextResponse.json({ 
+          success: true, 
+          message: `Permintaan berhasil disetujui${qrWarning}` 
+        });
       }
     }
-    return NextResponse.json({ success: false, message: 'Data tidak ditemukan' }, { status: 404 });
   } catch (e) {
     console.error('Error Approve:', e);
     return NextResponse.json({ success: false, message: e.message }, { status: 500 });

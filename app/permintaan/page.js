@@ -43,7 +43,9 @@ export default function PermintaanPage() {
   };
 
   const loadRequests = async (u) => {
-    const res = await fetch(`/api/requests?role=${u.role}&userName=${u.username}&signerRole=${u.signerRole||''}`).then(r => r.json());
+    const res = await fetch(`/api/requests?role=${u.role}&userName=${u.username}&signerRole=${u.signerRole||''}`, {
+      cache: 'no-store' // <--- TAMBAHKAN INI AGAR TIDAK DI-CACHE
+    }).then(r => r.json());
     if (res.success) setRequests(res.data);
   };
 
