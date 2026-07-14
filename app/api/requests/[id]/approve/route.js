@@ -86,7 +86,10 @@ export async function POST(req, { params }) {
                         insertInlineImage: {
                           location: { index: range.startIndex },
                           uri: qrImageUrl,
-                          objectSize: { height: { magnitude: 120, unit: 'PT' }, width: { magnitude: 120, unit: 'PT' } }
+                          objectSize: { 
+                            height: { magnitude: 75, unit: 'PT' }, // <--- DIKECILKAN JADI 75
+                            width: { magnitude: 75, unit: 'PT' }   // <--- DIKECILKAN JADI 75
+                          }
                         }
                       },
                       {
