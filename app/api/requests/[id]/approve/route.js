@@ -61,7 +61,7 @@ export async function POST(req, { params }) {
               const verifyUrl = `https://qr-sign-systemgen.vercel.app/verify/${params.id}`; 
               
               // 2. Gunakan logo PNG lokal, hapus fallback webp yang bikin error
-              const logoUrl = CONFIG.LOGO_URL || 'https://drive.google.com/uc?export=view&id=1zUifgTRQgjTnhZus-LlXeytUwoPdubLR'; 
+              const logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/4/4f/Laravel_logo.png'; 
               
               // 3. QuickChart API
               const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(verifyUrl)}&size=1000&centerImageUrl=${encodeURIComponent(logoUrl)}&format=png`;
