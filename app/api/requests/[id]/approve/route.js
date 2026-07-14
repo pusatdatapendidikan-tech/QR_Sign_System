@@ -27,6 +27,25 @@ export async function POST(req, { params }) {
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Disetujui');
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 14, approverName);
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 15, new Date().toISOString());
+
+                // 1.5. Update status di Sheet Jenis Surat (Sheet Surat)
+        const docType = data[i][6]; // Ambil jenis surat (kolom ke-7 / index 6)
+        if (docType && docType !== '-') {
+          try {
+            const safeName = docType.replace(/[\/\\:*?"<>|]/g, '-').trim(); // Samakan format nama sheet
+            const sheetData = await readSheet(safeName, false); // Baca data di sheet surat tersebut tanpa cache
+            
+            for (let j = 1; j < sheetData.length; j++) {
+              if (sheetData[j][1] === params.id) { // Cari baris yang ID-nya sama (ID ada di kolom B / index 1)
+                await updateCell(safeName, j + 1, 10, 'Disetujui'); // Update kolom 10 (Status) menjadi Disetujui
+                break; // Berhenti mencari setelah ketemu
+              }
+            }
+          } catch (sheetErr) {
+            console.error('Gagal update status di sheet surat:', sheetErr.message);
+            // Abaikan error jika sheet tidak ditemukan, agar proses approve tetap lanjut
+          }
+        }
         
         // 2. Proses Replace {{QR_CODE}} dengan Gambar Barcode/QR di Google Docs
         let qrWarning = '';
