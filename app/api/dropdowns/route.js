@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { batchGetSheets } from '@/lib/googleSheets';
 import { CONFIG, DEFAULT_SIGNERS } from '@/lib/config';
 
+// TAMBAHKAN BARIS INI AGAR TIDAK DI-CACHE OLEH NEXT.JS
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    // Kita HAPUS ensureSheets() di sini untuk menghemat kuota. 
-    // Asumsikan sheet sudah dibuat via /api/init
-    
     const ranges = [
       CONFIG.SHEETS.DIVISI, CONFIG.SHEETS.JABATAN, CONFIG.SHEETS.SIGNERS, 
       CONFIG.SHEETS.JENIS_SURAT, CONFIG.SHEETS.DEPARTEMEN_IM, CONFIG.SHEETS.NOMOR_SURAT

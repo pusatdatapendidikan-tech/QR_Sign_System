@@ -31,7 +31,7 @@ export default function PermintaanPage() {
   }, [user]);
 
   const loadDropdowns = async () => {
-    const res = await fetch('/api/dropdowns').then(r => r.json());
+    const res = await fetch('/api/dropdowns', { cache: 'no-store' }).then(r => r.json());
     if (res.success) {
       setDivisi(res.divisi); 
       setJabatan(res.jabatan); 
@@ -182,6 +182,7 @@ if (!confirmAccess.isConfirmed) {
         setEditId('');
         setForm({ nama:'', divisi:'', jabatan:'', jenisSurat:'', nomorSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
         loadRequests(user);
+        loadDropdowns();
       } else {
         Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
       }
