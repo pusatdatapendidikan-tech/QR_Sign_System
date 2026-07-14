@@ -59,8 +59,7 @@ export async function POST(req, { params }) {
               const docId = docIdMatch[1];
               const verifyUrl =  `https://qr-sign-systemgen.vercel.app//verify/${params.id}`; // GANTI DOMAIN ANDA
               const logoUrl = CONFIG.LOGO_URL || 'https://i0.wp.com/greatedunesia.id/wp-content/uploads/2024/05/ico-ge.webp?w=495&ssl=1';
-              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verifyUrl)}&image=${encodeURIComponent(logoUrl)}&color=000000&bgcolor=FFFFFF`;
-
+              const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(verifyUrl)}&size=1000&centerImageUrl=${encodeURIComponent(logoUrl)}&format=png`;
               // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
               await docs.documents.batchUpdate({
                 documentId: docId,
