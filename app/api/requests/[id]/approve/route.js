@@ -57,8 +57,13 @@ export async function POST(req, { params }) {
             
             if (docIdMatch) {
               const docId = docIdMatch[1];
-              const verifyUrl =  `https://qr-sign-systemgen.vercel.app//verify/${params.id}`; // GANTI DOMAIN ANDA
-              const logoUrl = CONFIG.LOGO_URL || 'https://i0.wp.com/greatedunesia.id/wp-content/uploads/2024/05/ico-ge.webp?w=495&ssl=1';
+              // 1. Perbaiki typo double slash
+              const verifyUrl = `https://qr-sign-systemgen.vercel.app/verify/${params.id}`; 
+              
+              // 2. Gunakan logo PNG lokal, hapus fallback webp yang bikin error
+              const logoUrl = CONFIG.LOGO_URL || 'https://qr-sign-systemgen.vercel.app/logo.png'; 
+              
+              // 3. QuickChart API
               const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(verifyUrl)}&size=1000&centerImageUrl=${encodeURIComponent(logoUrl)}&format=png`;
               // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
               await docs.documents.batchUpdate({
