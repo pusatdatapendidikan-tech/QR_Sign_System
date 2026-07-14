@@ -64,7 +64,7 @@ export async function POST(req, { params }) {
               const logoUrl = CONFIG.LOGO_URL || 'https://i.imgur.com/bqK21qf.png'; 
               
               // 3. QuickChart API
-              const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(verifyUrl)}&size=1000&centerImageUrl=${encodeURIComponent(logoUrl)}&format=png&ecLevel=H`;
+              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(verifyUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
               // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
               await docs.documents.batchUpdate({
                 documentId: docId,
