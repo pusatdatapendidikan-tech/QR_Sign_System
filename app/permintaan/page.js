@@ -484,19 +484,36 @@ if (!confirmAccess.isConfirmed) {
               {r.status === 'Diteruskan' && <div className="hc-status-note note-diteruskan"><i className="bi bi-share me-1"></i>Diteruskan oleh <strong>{r.forwardedBy}</strong> kepada <strong>{r.targetSigner}</strong>.</div>}
               {r.status === 'Disetujui' && <div className="hc-status-note note-disetujui"><i className="bi bi-check-circle me-1" style={{color:'var(--success)'}}></i>Disetujui oleh {r.approvedBy} pada {r.approvedAt}.</div>}
               {r.status === 'Ditolak' && <div className="hc-status-note note-ditolak"><i className="bi bi-x-circle me-1"></i>Ditolak oleh {r.rejectedBy} pada {r.rejectedAt}.{r.rejectionReason && r.rejectionReason !== '-' ? ` Alasan: ${r.rejectionReason}` : ''}</div>}
-              <div className="hc-actions">
-                {r.fileUrl && r.fileUrl !== '-' && r.status === 'Disetujui' && (
-                  <>
-                    <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action btn-action-view" title="Buka di Google Docs">
-                      <i className="bi bi-file-earmark-text"></i>
-                    </button>
-                    {/* TAMBAHKAN TOMBOL INI */}
-                    <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white' }}>
-                      <i className="bi bi-file-earmark-pdf"></i>
-                    </a>
-                  </>
-                )}
-              </div>
+                <div className="hc-actions">
+                  {r.fileUrl && r.fileUrl !== '-' && r.status === 'Disetujui' && (
+                    <>
+                      {/* Tombol Google Docs (Biru) */}
+                      <button 
+                        onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
+                        className="btn-action" 
+                        title="Buka di Google Docs" 
+                        style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                          <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/>
+                          <path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/>
+                        </svg>
+                      </button>
+
+                      {/* Tombol PDF (Merah) */}
+                      <a 
+                        href={`/api/requests/${r.id}/pdf`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="btn-action" 
+                        title="Download PDF" 
+                        style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <i className="bi bi-file-earmark-pdf"></i>
+                      </a>
+                    </>
+                  )}
+                </div>
             </div>
           ))
         )}
@@ -564,17 +581,29 @@ if (!confirmAccess.isConfirmed) {
                       )}
                         {r.fileUrl && r.fileUrl !== '-' && (
                           <>
+                            {/* Tombol Google Docs (Biru) */}
                             <button 
                               onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
-                              className="btn-action btn-action-view" 
-                              title="Lihat File"
+                              className="btn-action" 
+                              title="Buka di Google Docs" 
+                              style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                             >
-                              <i className="bi bi-file-earmark"></i>
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/>
+                                <path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/>
+                              </svg>
                             </button>
-                            
-                            {/* TAMBAHKAN TOMBOL INI */}
+
+                            {/* Tombol PDF (Merah) - Hanya muncul jika sudah Disetujui */}
                             {r.status === 'Disetujui' && (
-                              <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white' }}>
+                              <a 
+                                href={`/api/requests/${r.id}/pdf`} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn-action" 
+                                title="Download PDF" 
+                                style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
                                 <i className="bi bi-file-earmark-pdf"></i>
                               </a>
                             )}
