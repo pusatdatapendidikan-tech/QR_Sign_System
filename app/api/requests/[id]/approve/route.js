@@ -58,6 +58,7 @@ export async function POST(req, { params }) {
             if (docIdMatch) {
               const docId = docIdMatch[1];
               const verifyUrl =  `https://qr-sign-systemgen.vercel.app//verify/${params.id}`; // GANTI DOMAIN ANDA
+              const logoUrl = CONFIG.LOGO_URL || 'https://i0.wp.com/greatedunesia.id/wp-content/uploads/2024/05/ico-ge.webp?w=495&ssl=1';
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verifyUrl)}`;
 
               // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
