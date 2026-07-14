@@ -486,9 +486,15 @@ if (!confirmAccess.isConfirmed) {
               {r.status === 'Ditolak' && <div className="hc-status-note note-ditolak"><i className="bi bi-x-circle me-1"></i>Ditolak oleh {r.rejectedBy} pada {r.rejectedAt}.{r.rejectionReason && r.rejectionReason !== '-' ? ` Alasan: ${r.rejectionReason}` : ''}</div>}
               <div className="hc-actions">
                 {r.fileUrl && r.fileUrl !== '-' && r.status === 'Disetujui' && (
-                  <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action btn-action-view" title="Buka di Google Docs">
-                    <i className="bi bi-file-earmark-text"></i>
-                  </button>
+                  <>
+                    <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action btn-action-view" title="Buka di Google Docs">
+                      <i className="bi bi-file-earmark-text"></i>
+                    </button>
+                    {/* TAMBAHKAN TOMBOL INI */}
+                    <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white' }}>
+                      <i className="bi bi-file-earmark-pdf"></i>
+                    </a>
+                  </>
                 )}
               </div>
             </div>
@@ -557,13 +563,22 @@ if (!confirmAccess.isConfirmed) {
                         </>
                       )}
                         {r.fileUrl && r.fileUrl !== '-' && (
-                          <button 
-                            onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
-                            className="btn-action btn-action-view" 
-                            title="Lihat File"
-                          >
-                            <i className="bi bi-file-earmark"></i>
-                          </button>
+                          <>
+                            <button 
+                              onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
+                              className="btn-action btn-action-view" 
+                              title="Lihat File"
+                            >
+                              <i className="bi bi-file-earmark"></i>
+                            </button>
+                            
+                            {/* TAMBAHKAN TOMBOL INI */}
+                            {r.status === 'Disetujui' && (
+                              <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white' }}>
+                                <i className="bi bi-file-earmark-pdf"></i>
+                              </a>
+                            )}
+                          </>
                         )}
                       {user.role === 'admin' && <button className="btn-action btn-action-delete" title="Hapus" onClick={() => doDelete(r.id)}><i className="bi bi-trash"></i></button>}
                     </div>
