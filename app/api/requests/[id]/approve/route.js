@@ -59,7 +59,7 @@ export async function POST(req, { params }) {
             
             if (docIdMatch) {
               const docId = docIdMatch[1];
-              const verifyUrl = `https://DOMAIN-VERCEL-ANDA.vercel.app/verify/${params.id}`; // GANTI DOMAIN ANDA
+              const verifyUrl = `https://qr-sign-systemgen.vercel.app/verify/${params.id}`; // GANTI DOMAIN ANDA
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verifyUrl)}`;
 
               await docs.documents.batchUpdate({
