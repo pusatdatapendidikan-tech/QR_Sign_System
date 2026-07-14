@@ -24,15 +24,19 @@ export async function GET(req) {
       
       if (include) {
         total++;
-        const st = data[i][12];
+        const st = (data[i][12] || '').trim(); // <--- TAMBAHKAN .trim() UNTUK HAPUS SPASI
+        
         if (st === 'Menunggu') menunggu++;
         else if (st === 'Diteruskan') diteruskan++;
         else if (st === 'Disetujui') {
+          disetujui++; // <--- INI UNTUK KARTU DASHBOARD (TOTAL KESELURUHAN)
+          
+          // Cek apakah belum dibaca (khusus user) untuk Badge Notifikasi
           if (role === 'user') {
-            const isRead = data[i][21] === true || String(data[i][21]).toUpperCase() === 'TRUE';
-            if (!isRead) disetujui++;
-          } else {
-            disetujui++;
+            const isRead = data[i][21] === true || String(data[i][21]).trim().toUpperCase() === 'TRUE';
+            if (!isRead) {
+              disetujuiUnread++; // <--- INI KHUSUS UNTUK BADGE MERAH
+            }
           }
         } else if (st === 'Ditolak') ditolak++;
       }
@@ -40,7 +44,7 @@ export async function GET(req) {
     
     return NextResponse.json({
       success: true,
-      data: { total, menunggu, diteruskan, disetujui, ditolak },
+      data: { total, menunggu, diteruskan, disetujui, disetujuiUnread, ditolak }, // <--- TAMBAHKAN disetujuiUnread
     });
   } catch (e) {
     return NextResponse.json({ success: false, message: e.message }, { status: 500 });

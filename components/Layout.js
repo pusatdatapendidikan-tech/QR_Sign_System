@@ -32,7 +32,7 @@ export default function Layout({ user, children }) {
           } else if (user.role === 'atasan') {
             setBadgeCount(res.data.diteruskan || 0);
           } else if (user.role === 'user') {
-            setBadgeCount(res.data.disetujui || 0);
+            setBadgeCount(res.data.disetujuiUnread || 0);
           }
         }
       } catch (e) {}
