@@ -21,6 +21,7 @@ export async function POST(req, { params }) {
         
         const r = i + 1;
         const fileUrl = data[i][10]; 
+        const docNumber = data[i][7] || '-';
         
         // 1. Update status di Google Sheets
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Disetujui');
@@ -40,16 +41,24 @@ export async function POST(req, { params }) {
               const verifyUrl =  `https://qr-sign-systemgen.vercel.app//verify/${params.id}`; // GANTI DOMAIN ANDA
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verifyUrl)}`;
 
-              // Step A: Replace teks {{QR_CODE}} menjadi SATU karakter tunggal § agar tidak terpecah
+              // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
               await docs.documents.batchUpdate({
                 documentId: docId,
                 requestBody: {
-                  requests: [{
-                    replaceAllText: {
-                      containsText: { text: '{{QR_CODE}}', matchCase: true },
-                      replaceText: '§' // Menggunakan karakter aman yang tidak akan dipakai di surat
+                  requests: [
+                    {
+                      replaceAllText: {
+                        containsText: { text: '{{QR_CODE}}', matchCase: true },
+                        replaceText: '§' // Placeholder untuk gambar
+                      }
+                    },
+                    {
+                      replaceAllText: {
+                        containsText: { text: '{{NO_SURAT}}', matchCase: true },
+                        replaceText: docNumber // <--- GANTI DENGAN NOMOR SURAT DARI DATABASE
+                      }
                     }
-                  }]
+                  ]
                 }
               });
 
