@@ -61,10 +61,10 @@ export async function POST(req, { params }) {
               const verifyUrl = `https://qr-sign-systemgen.vercel.app/verify/${params.id}`; 
               
               // 2. Gunakan logo PNG lokal, hapus fallback webp yang bikin error
-              const logoUrl = 'https://upload.wikimedia.org/wikipedia/commons/4/4f/Laravel_logo.png'; 
+              const logoUrl = CONFIG.LOGO_URL || 'https://i.imgur.com/bqK21qf.png'; 
               
               // 3. QuickChart API
-              const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(verifyUrl)}&size=1000&centerImageUrl=${encodeURIComponent(logoUrl)}&format=png`;
+              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(verifyUrl)}&image=${encodeURIComponent(logoUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
               // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
               await docs.documents.batchUpdate({
                 documentId: docId,
