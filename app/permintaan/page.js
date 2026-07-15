@@ -111,10 +111,25 @@ export default function PermintaanPage() {
           }),
         }).then(r => r.json());
       } else {
-        if (!form.docLink || form.docLink.indexOf('docs.google.com') === -1) {
+        if (!form.docLink) {
           Swal.close();
-          Swal.fire({icon:'warning', title:'Perhatian', text:'Masukkan link Google Docs yang valid', confirmButtonColor:'#1d4ed8'});
+          Swal.fire({icon:'warning', title:'Perhatian', text:'Link dokumen wajib diisi', confirmButtonColor:'#1d4ed8'});
           return;
+        }
+
+        // Validasi khusus: Sertifikat harus link Google Drive, lainnya harus Google Docs
+        if (form.jenisSurat === 'Sertifikat') {
+          if (form.docLink.indexOf('drive.google.com') === -1) {
+            Swal.close();
+            Swal.fire({icon:'warning', title:'Perhatian', text:'Untuk Sertifikat, masukkan link Google Drive (PDF) yang valid', confirmButtonColor:'#1d4ed8'});
+            return;
+          }
+        } else {
+          if (form.docLink.indexOf('docs.google.com') === -1) {
+            Swal.close();
+            Swal.fire({icon:'warning', title:'Perhatian', text:'Masukkan link Google Docs yang valid', confirmButtonColor:'#1d4ed8'});
+            return;
+          }
         }
         res = await fetch('/api/requests', {
           method:'POST', headers:{'Content-Type':'application/json'},
