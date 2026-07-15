@@ -134,12 +134,12 @@ export async function POST(req, { params }) {
             });
 
             // A6. Tempel Nomor Sertifikat di TENGAH ATAS halaman (Diturunkan & Font Diperbesar)
-            const textFontSize = 18; // Diperbesar dari 12 menjadi 18 agar lebih jelas di sertifikat
+            const textFontSize = 17; // Diperbesar dari 12 menjadi 18 agar lebih jelas di sertifikat
             const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
             
             page.drawText(docNumber, {
               x: (width - textWidth) / 2, // Tetap di tengah horizontal
-              y: height - 120,            // Diturunkan: dari (height - 60) menjadi (height - 120). Semakin besar angkanya, semakin ke bawah posisinya.
+              y: height - 130,            // Diturunkan: dari (height - 60) menjadi (height - 120). Semakin besar angkanya, semakin ke bawah posisinya.
               size: textFontSize,          
               font: font,
               color: rgb(0, 0, 0),        
