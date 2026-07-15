@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { CONFIG } from '@/lib/config'; // <--- TAMBAHKAN IMPORT INI
+import { CONFIG } from '@/lib/config';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +40,7 @@ export default function LoginPage() {
         body: JSON.stringify(loginForm),
       }).then(r => r.json());
       if (res.success) {
-        sessionStorage.setItem('qrSignUser', JSON.stringify(res.user)); // Tambahkan baris ini
+        sessionStorage.setItem('qrSignUser', JSON.stringify(res.user));
         Swal.fire({ icon:'success', title:'Berhasil', text:`Selamat datang, ${res.user.name}`, timer:800, showConfirmButton:false });
         setTimeout(() => router.push('/dashboard'), 200);
       } else {
@@ -86,10 +86,8 @@ export default function LoginPage() {
         {isLogin ? (
           <>
             <div className="login-header">
-              {/* GANTI IKON DENGAN LOGO */}
-              <div className="logo-icon">
-                <img src={CONFIG.LOGO_URL} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
-              </div>
+              {/* LOGO TANPA FRAME/BOKS */}
+              <img src={CONFIG.LOGO_URL} alt="Logo" style={{ height: '65px', width: 'auto', objectFit: 'contain', marginBottom: '8px' }} />
               <h2>QR Sign System</h2>
               <p className="sub">Sistem Permintaan Tanda Tangan Digital</p>
             </div>
@@ -123,10 +121,8 @@ export default function LoginPage() {
         ) : (
           <>
             <div className="login-header">
-              {/* GANTI IKON DENGAN LOGO JUGA DI HALAMAN DAFTAR */}
-              <div className="logo-icon">
-                <img src={CONFIG.LOGO_URL} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }} />
-              </div>
+              {/* LOGO TANPA FRAME/BOKS */}
+              <img src={CONFIG.LOGO_URL} alt="Logo" style={{ height: '65px', width: 'auto', objectFit: 'contain', marginBottom: '8px' }} />
               <h2>Daftar Akun Baru</h2>
               <p className="sub">Isi data berikut untuk mendaftar</p>
             </div>
