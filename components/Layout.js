@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { CONFIG } from '@/lib/config';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 
@@ -84,7 +85,9 @@ export default function Layout({ user, children }) {
       <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
       <nav className={`sidebar ${collapsed ? 'collapsed' : ''} ${sidebarOpen ? 'show' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-icon"><i className="bi bi-qr-code"></i></div>
+          <div className="brand-icon">
+            <img src={CONFIG.LOGO_URL} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }} />
+          </div>
           <div><h6>QR Sign</h6><small>Signature System</small></div>
         </div>
         <div className="sidebar-nav">
