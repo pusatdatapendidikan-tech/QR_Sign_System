@@ -4,75 +4,6 @@ import { CONFIG } from '@/lib/config';
 import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
 
-async function getJenisSurat() {
-  const data = await readSheet(CONFIG.SHEETS.JENIS_SURAT);
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) list.push({ nama: data[i][0].trim(), format: (data[i][1] || '').trim() });
-  }
-  return list;
-}
-
-async function getDepartemenIM() {
-  const data = await readSheet(CONFIG.SHEETS.DEPARTEMEN_IM);
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) list.push({ nama: data[i][0].trim(), kode: (data[i][1] || '').trim() });
-  }
-  return list;
-}
-
-async function generateDocNumber(docType, departemen) {
-  const jenisSurat = await getJenisSurat();
-  const found = jenisSurat.find(j => j.nama === docType);
-  let prefix = found?.format || '';
-  
-  if (docType === 'Internal Memo/IM' && departemen) {
-    const dept = await getDepartemenIM();
-    const dep = dept.find(d => d.nama === departemen);
-    if (!dep || !dep.kode) return '-';
-    prefix = dep.kode + '/IM';
-  }
-  if (!prefix) return '-';
-  
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  const counterKey = departemen ? `${docType} - ${departemen}` : docType;
-  
-  const nomorData = await readSheet(CONFIG.SHEETS.NOMOR_SURAT, false);
-  let maxNum = 0;
-  let currentMonthRow = -1;
-  
-  // ✅ FIX: Cari nomor tertinggi di tahun yang sama, abaikan bulan
-  for (let i = 1; i < nomorData.length; i++) {
-    if (nomorData[i][0] === counterKey && parseInt(nomorData[i][2]) === year) {
-      const currentNum = parseInt(nomorData[i][3]) || 0;
-      if (currentNum > maxNum) {
-        maxNum = currentNum;
-      }
-      
-      // Cek juga apakah sudah ada record untuk bulan saat ini
-      if (parseInt(nomorData[i][1]) === month) {
-        currentMonthRow = i + 1; // Simpan baris bulan saat ini untuk di-update nanti
-      }
-    }
-  }
-  
-  // Lanjutkan nomor dari yang tertinggi
-  const nextNum = maxNum + 1;
-  
-  if (currentMonthRow > 0) {
-    // Jika di bulan ini sudah ada barisnya, update counternya saja
-    await updateCell(CONFIG.SHEETS.NOMOR_SURAT, currentMonthRow, 4, nextNum);
-  } else {
-    // Jika ini permintaan pertama di bulan baru, buat baris baru dengan counter lanjutan
-    await appendRow(CONFIG.SHEETS.NOMOR_SURAT, [counterKey, month, year, nextNum]);
-  }
-  
-  return generateDocumentNumber(prefix, month, year, nextNum);
-}
-
 export async function GET(req) {
   try {
     const session = await getSession();
@@ -128,17 +59,18 @@ export async function POST(req) {
     const id = generateId();
     const docType = d.documentType || '-';
     const departemen = d.departemen || '';
-    let docNumber = d.documentNumber || '-';
+    let docNumber = '-'; // <--- UBAH: Selalu '-' saat pengajuan
     
-    if (docType && docType !== '-') {
-      docNumber = await generateDocNumber(docType, departemen);
-    }
+    // HAPUS BLOK IF INI:
+    // if (docType && docType !== '-') {
+    //   docNumber = await generateDocNumber(docType, departemen);
+    // }
     
     await appendRow(CONFIG.SHEETS.REQUESTS, [
       id, d.requesterName, d.requesterUsername, d.division, d.position,
       d.requestType, docType, docNumber, d.perihal || '-',
       d.targetSigner || '-', d.fileUrl || '-', d.fileName || '-',
-      'Menunggu', '-', '-', '-', '-', '-', getWIBDate(), '-', '-', false,
+      'Menunggu', '-', '-', '-', '-', '-', getWIBDate(), '-', '-', false, departemen || '-', // <--- TAMBAHKAN departemen di akhir
     ]);
     
     if (docType && docType !== '-') {

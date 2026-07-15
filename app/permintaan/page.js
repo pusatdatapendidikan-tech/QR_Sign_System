@@ -17,11 +17,10 @@ export default function PermintaanPage() {
   const [signers, setSigners] = useState([]);
   const [jenisSurat, setJenisSurat] = useState([]);
   const [departemenIM, setDepartemenIM] = useState([]);
-  const [nomorSurat, setNomorSurat] = useState([]);
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState('');
-  const [form, setForm] = useState({ nama:'', divisi:'', jabatan:'', jenisSurat:'', nomorSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
+  const [form, setForm] = useState({ nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
 
   useEffect(() => {
     if (user) {
@@ -38,78 +37,29 @@ export default function PermintaanPage() {
       setSigners(res.signers); 
       setJenisSurat(res.jenisSurat); 
       setDepartemenIM(res.departemenIM); 
-      setNomorSurat(res.nomorSurat);
     }
   };
 
   const loadRequests = async (u) => {
-    const res = await fetch(`/api/requests?role=${u.role}&userName=${u.username}&signerRole=${u.signerRole||''}`, {
-      cache: 'no-store' // <--- TAMBAHKAN INI AGAR TIDAK DI-CACHE
-    }).then(r => r.json());
+    const res = await fetch(`/api/requests?role=${u.role}&userName=${u.username}&signerRole=${u.signerRole||''}`, { cache: 'no-store' }).then(r => r.json());
     if (res.success) setRequests(res.data);
   };
 
   const handleOpenDoc = async (id, url) => {
     window.open(url, '_blank');
     try {
-      // Tandai sebagai sudah dibaca di database
       await fetch(`/api/requests/${id}/read`, { method: 'POST' });
-      // Update state lokal agar tombol/ikon langsung berubah tanpa reload
       setRequests(prev => prev.map(r => r.id === id ? { ...r, readByRequester: true } : r));
       window.dispatchEvent(new Event('badge-update'));
     } catch (e) {}
   };
 
   const onDocTypeChange = (docType) => {
-    let newForm = { ...form, jenisSurat: docType, nomorSurat:'', departemen: docType === 'Internal Memo/IM' ? form.departemen : '' };
-    if (!docType) { setForm(newForm); return; }
-    
-    const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
-    const ROMAWI = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
-    
-    if (docType === 'Internal Memo/IM') {
-      const dept = form.departemen;
-      if (!dept) { setForm({...newForm, nomorSurat:'(pilih departemen)'}); return; }
-      const dep = departemenIM.find(d => d.nama === dept);
-      if (!dep) { setForm({...newForm, nomorSurat:'(kode dept belum diatur)'}); return; }
-      const prefix = dep.kode + '/IM';
-      const counterKey = `${docType} - ${dept}`;
-
-      // ✅ FIX: Cari nomor tertinggi di tahun berjalan, abaikan bulan
-      let maxNum = 0;
-      for (const ns of nomorSurat) {
-        if (ns.jenisSurat === counterKey && ns.tahun === year) {
-          const currentNum = parseInt(ns.nomorTerakhir) || 0;
-          if (currentNum > maxNum) maxNum = currentNum;
-        }
-      }
-      const nextNum = maxNum + 1;
-
-      newForm.nomorSurat = String(nextNum).padStart(3,'0') + '/' + prefix + '/' + ROMAWI[month] + '/' + year;
-    } else {
-      const found = jenisSurat.find(j => j.nama === docType);
-      if (!found || !found.format || found.format === 'IM') { setForm({...newForm, nomorSurat:'(format belum diatur)'}); return; }
-
-      // ✅ FIX: Cari nomor tertinggi di tahun berjalan, abaikan bulan
-      let maxNum = 0;
-      for (const ns of nomorSurat) {
-        if (ns.jenisSurat === docType && ns.tahun === year) {
-          const currentNum = parseInt(ns.nomorTerakhir) || 0;
-          if (currentNum > maxNum) maxNum = currentNum;
-        }
-      }
-      const nextNum = maxNum + 1;
-
-      newForm.nomorSurat = String(nextNum).padStart(3,'0') + '/' + found.format + '/' + ROMAWI[month] + '/' + year;
-    }
-    setForm(newForm);
+    setForm({ ...form, jenisSurat: docType, departemen: docType === 'Internal Memo/IM' ? form.departemen : '' });
   };
 
   const onDeptChange = (dept) => {
     setForm({ ...form, departemen: dept });
-    setTimeout(() => onDocTypeChange(form.jenisSurat), 100);
   };
 
   const onSignerChange = (jabatan) => {
@@ -121,21 +71,19 @@ export default function PermintaanPage() {
     if (!form.jenisSurat) { Swal.fire({icon:'warning', title:'Perhatian', text:'Pilih jenis surat', confirmButtonColor:'#1d4ed8'}); return; }
     if (form.jenisSurat === 'Internal Memo/IM' && !form.departemen) { Swal.fire({icon:'warning', title:'Perhatian', text:'Pilih departemen', confirmButtonColor:'#1d4ed8'}); return; }
     if (!form.tujuanTtd) { Swal.fire({icon:'warning', title:'Perhatian', text:'Pilih tujuan tanda tangan', confirmButtonColor:'#1d4ed8'}); return; }
-
-    const confirmAccess = await Swal.fire({
-  title: 'Konfirmasi Akses Dokumen',
-  html: 'Apakah Anda sudah mengatur Sharing dokumen ke <strong>Anyone with the link = Editor</strong>?<br/><br/><small>Jika belum, QR Code tidak bisa disisipkan.</small>',
-  icon: 'warning',
-  showCancelButton: true,
-  confirmButtonText: 'Ya, Sudah Editor!',
-  cancelButtonText: 'Belum, Cek Dulu',
-  confirmButtonColor: '#059669'
-});
-
-if (!confirmAccess.isConfirmed) {
-  return; // Batalkan submit jika user belum yakin
-}
     
+    // Konfirmasi Akses Editor Google Docs
+    const confirmAccess = await Swal.fire({
+      title: 'Konfirmasi Akses Dokumen',
+      html: 'Apakah Anda sudah mengatur Sharing dokumen ke <strong>Anyone with the link = Editor</strong>?<br/><br/><small>Jika belum, QR Code tidak bisa disisipkan saat disetujui.</small>',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Sudah Editor!',
+      cancelButtonText: 'Belum, Cek Dulu',
+      confirmButtonColor: '#059669'
+    });
+    if (!confirmAccess.isConfirmed) return;
+
     Swal.fire({ title:'Mengirim...', allowOutsideClick:false, didOpen: () => Swal.showLoading() });
     
     try {
@@ -146,7 +94,6 @@ if (!confirmAccess.isConfirmed) {
         position: form.jabatan || user.position,
         requestType: 'Tanda Tangan',
         documentType: form.jenisSurat,
-        documentNumber: '-',
         departemen: form.departemen || '',
         perihal: form.perihal || '-',
         targetSigner: form.tujuanTtd,
@@ -159,7 +106,7 @@ if (!confirmAccess.isConfirmed) {
         res = await fetch(`/api/requests/${editId}`, {
           method:'PUT', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({
-            documentType: form.jenisSurat, documentNumber: form.nomorSurat,
+            documentType: form.jenisSurat,
             perihal: form.perihal || '-', targetSigner: form.tujuanTtd, requestType:'Tanda Tangan',
           }),
         }).then(r => r.json());
@@ -180,9 +127,9 @@ if (!confirmAccess.isConfirmed) {
         Swal.fire({icon:'success', title:'Berhasil', text:res.message, timer:1500, showConfirmButton:false});
         setShowForm(false);
         setEditId('');
-        setForm({ nama:'', divisi:'', jabatan:'', jenisSurat:'', nomorSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
+        setForm({ nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
         loadRequests(user);
-        loadDropdowns();
+        loadDropdowns(); // Refresh dropdowns/counter jika diperlukan
       } else {
         Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
       }
@@ -209,7 +156,7 @@ if (!confirmAccess.isConfirmed) {
         if (res.success) { 
           Swal.fire({icon:'success', title:'Diteruskan', text:res.message, timer:1500, showConfirmButton:false}); 
           loadRequests(user); 
-          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+          window.dispatchEvent(new Event('badge-update')); 
         }
         else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
       }
@@ -227,9 +174,8 @@ if (!confirmAccess.isConfirmed) {
           }).then(r => r.json());
           Swal.close();
           if (res.success) { 
-            Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:1500, showConfirmButton:false}); 
+            Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:2000, showConfirmButton:false}); 
             loadRequests(user); 
-            // BARIS INI YANG MEMBUAT BADGE LANGSUNG HILANG SAAT SETUJUI
             window.dispatchEvent(new Event('badge-update')); 
           }
           else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
@@ -253,7 +199,7 @@ if (!confirmAccess.isConfirmed) {
         if (res.success) { 
           Swal.fire({icon:'success', title:'Ditolak', text:res.message, timer:1500, showConfirmButton:false}); 
           loadRequests(user); 
-          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+          window.dispatchEvent(new Event('badge-update')); 
         }
         else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
       }
@@ -270,7 +216,7 @@ if (!confirmAccess.isConfirmed) {
           if (res.success) { 
           Swal.fire({icon:'success', title:'Dihapus', text:res.message, timer:1500, showConfirmButton:false}); 
           loadRequests(user); 
-          window.dispatchEvent(new Event('badge-update')); // <-- TAMBAHKAN INI
+          window.dispatchEvent(new Event('badge-update')); 
         }
           else Swal.fire({icon:'error', title:'Gagal', text:res.message, confirmButtonColor:'#1d4ed8'});
         }
@@ -283,7 +229,6 @@ if (!confirmAccess.isConfirmed) {
       nama: req.requesterName, divisi: req.division === '-' ? '' : req.division,
       jabatan: req.position === '-' ? '' : req.position,
       jenisSurat: req.documentType === '-' ? '' : req.documentType,
-      nomorSurat: req.documentNumber === '-' ? '' : req.documentNumber,
       perihal: req.perihal === '-' ? '' : req.perihal,
       tujuanTtd: req.targetSigner === '-' ? '' : req.targetSigner,
       namaSigner: signers.find(s => s.jabatan === req.targetSigner)?.nama || '',
@@ -294,7 +239,7 @@ if (!confirmAccess.isConfirmed) {
 
   const openAdd = () => {
     setEditId('');
-    setForm({ nama:'', divisi:user.division === '-' ? '' : user.division, jabatan:user.position === '-' ? '' : user.position, jenisSurat:'', nomorSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
+    setForm({ nama:'', divisi:user.division === '-' ? '' : user.division, jabatan:user.position === '-' ? '' : user.position, jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
     setShowForm(true);
   };
 
@@ -303,7 +248,6 @@ if (!confirmAccess.isConfirmed) {
     return <span className={`status-badge ${cls}`}>{s}</span>;
   };
 
-  // FUNGSI EXPORT EXCEL
   const exportExcel = () => {
     if (filtered.length === 0) { 
       Swal.fire({icon:'info', title:'Info', text:'Tidak ada data untuk diexport', confirmButtonColor:'#1d4ed8'}); 
@@ -325,16 +269,13 @@ if (!confirmAccess.isConfirmed) {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
     ws['!cols'] = [
       {wch: 4}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 18}, 
       {wch: 22}, {wch: 25}, {wch: 30}, {wch: 22}, {wch: 12}, 
       {wch: 25}, {wch: 20}, {wch: 25}, {wch: 30}
     ];
-
     XLSX.utils.book_append_sheet(wb, ws, "Data Permintaan");
     XLSX.writeFile(wb, 'Data_Permintaan.xlsx');
-    
     Swal.fire({icon:'success', title:'Berhasil', text:'File Excel berhasil diunduh', timer:1500, showConfirmButton:false});
   };
 
@@ -410,7 +351,13 @@ if (!confirmAccess.isConfirmed) {
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Nomor Surat</label>
-                    <input type="text" className="form-control" value={form.nomorSurat} readOnly style={{background:'#f0fdf4',fontWeight:600,color:'#065f46'}} />
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      value="Akan digenerate otomatis saat disetujui" 
+                      readOnly 
+                      style={{background:'#f8fafc', fontWeight:600, color:'#64748b', fontStyle:'italic'}} 
+                    />
                   </div>
                   {form.jenisSurat === 'Internal Memo/IM' && (
                     <div className="col-md-6">
@@ -443,20 +390,20 @@ if (!confirmAccess.isConfirmed) {
                   </div>
                   <div className="col-12">
                     <label className="form-label">Link Google Docs (Template Surat)</label>
-                      <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
-                        <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight: 600}}>
-                          <i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!
-                        </p>
-                        <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
-                          1. Klik <strong>Share/Bagikan</strong> di Google Docs Anda.<br/>
-                          2. Ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
-                          <em style={{fontSize:11, opacity:0.8}}>(Jika tidak diatur ke Editor, sistem gagal menyisipkan QR Code saat disetujui)</em>
-                        </p>
-                        <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
-                        <p style={{fontSize:12,color:'#0369a1',margin:0,lineHeight:1.6}}>
-                          <i className="bi bi-info-circle me-1"></i>Pastikan template surat memiliki penanda <strong style={{background:'#dbeafe',padding:'1px 6px',borderRadius:4}}>{'{'}{'}QR_CODE{'}{'}'}</strong> di area tanda tangan.
-                        </p>
-                      </div>
+                    <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
+                      <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight:600}}>
+                        <i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!
+                      </p>
+                      <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
+                        1. Klik <strong>Share/Bagikan</strong> di Google Docs Anda.<br/>
+                        2. Ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
+                        <em style={{fontSize:11, opacity:0.8}}>(Jika tidak diatur ke Editor, sistem gagal menyisipkan QR Code saat disetujui)</em>
+                      </p>
+                      <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
+                      <p style={{fontSize:12,color:'#0369a1',margin:0,lineHeight:1.6}}>
+                        <i className="bi bi-info-circle me-1"></i>Pastikan template surat memiliki penanda <strong style={{background:'#dbeafe',padding:'1px 6px',borderRadius:4}}>{'{'}{'}QR_CODE{'}{'}'}</strong> dan <strong>{'{'}{'}NO_SURAT{'}{'}'}</strong> di tempat yang sesuai.
+                      </p>
+                    </div>
                     <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
                   </div>
                 </div>
@@ -485,36 +432,18 @@ if (!confirmAccess.isConfirmed) {
               {r.status === 'Diteruskan' && <div className="hc-status-note note-diteruskan"><i className="bi bi-share me-1"></i>Diteruskan oleh <strong>{r.forwardedBy}</strong> kepada <strong>{r.targetSigner}</strong>.</div>}
               {r.status === 'Disetujui' && <div className="hc-status-note note-disetujui"><i className="bi bi-check-circle me-1" style={{color:'var(--success)'}}></i>Disetujui oleh {r.approvedBy} pada {r.approvedAt}.</div>}
               {r.status === 'Ditolak' && <div className="hc-status-note note-ditolak"><i className="bi bi-x-circle me-1"></i>Ditolak oleh {r.rejectedBy} pada {r.rejectedAt}.{r.rejectionReason && r.rejectionReason !== '-' ? ` Alasan: ${r.rejectionReason}` : ''}</div>}
-                <div className="hc-actions">
-                  {r.fileUrl && r.fileUrl !== '-' && r.status === 'Disetujui' && (
-                    <>
-                      {/* Tombol Google Docs (Biru) */}
-                      <button 
-                        onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
-                        className="btn-action" 
-                        title="Buka di Google Docs" 
-                        style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                          <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/>
-                          <path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/>
-                        </svg>
-                      </button>
-
-                      {/* Tombol PDF (Merah) */}
-                      <a 
-                        href={`/api/requests/${r.id}/pdf`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="btn-action" 
-                        title="Download PDF" 
-                        style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <i className="bi bi-file-earmark-pdf"></i>
-                      </a>
-                    </>
-                  )}
-                </div>
+              <div className="hc-actions">
+                {r.fileUrl && r.fileUrl !== '-' && r.status === 'Disetujui' && (
+                  <>
+                    <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action" title="Buka di Google Docs" style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/><path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/></svg>
+                    </button>
+                    <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className="bi bi-file-earmark-pdf"></i>
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
           ))
         )}
@@ -580,36 +509,21 @@ if (!confirmAccess.isConfirmed) {
                           <button className="btn-action btn-action-reject" title="Tolak" onClick={() => doReject(r.id)}><i className="bi bi-x"></i></button>
                         </>
                       )}
-                        {r.fileUrl && r.fileUrl !== '-' && (
-                          <>
-                            {/* Tombol Google Docs (Biru) */}
-                            <button 
-                              onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
-                              className="btn-action" 
-                              title="Buka di Google Docs" 
-                              style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                            >
-                              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/>
-                                <path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/>
-                              </svg>
-                            </button>
-
-                            {/* Tombol PDF (Merah) - Hanya muncul jika sudah Disetujui */}
-                            {r.status === 'Disetujui' && (
-                              <a 
-                                href={`/api/requests/${r.id}/pdf`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="btn-action" 
-                                title="Download PDF" 
-                                style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <i className="bi bi-file-earmark-pdf"></i>
-                              </a>
-                            )}
-                          </>
-                        )}
+                      {r.fileUrl && r.fileUrl !== '-' && (
+                        <button 
+                          onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
+                          className="btn-action" 
+                          title="Buka di Google Docs" 
+                          style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/><path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/></svg>
+                        </button>
+                      )}
+                      {r.status === 'Disetujui' && (
+                        <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <i className="bi bi-file-earmark-pdf" style={{fontSize:14}}></i>
+                        </a>
+                      )}
                       {user.role === 'admin' && <button className="btn-action btn-action-delete" title="Hapus" onClick={() => doDelete(r.id)}><i className="bi bi-trash"></i></button>}
                     </div>
                   </td>
@@ -646,7 +560,10 @@ if (!confirmAccess.isConfirmed) {
                   <div className="col-md-6"><label className="form-label">Divisi</label><select className="form-select" value={form.divisi} onChange={e => setForm({...form, divisi: e.target.value})}><option value="">-- Pilih --</option>{divisi.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
                   <div className="col-md-6"><label className="form-label">Jabatan</label><select className="form-select" value={form.jabatan} onChange={e => setForm({...form, jabatan: e.target.value})}><option value="">-- Pilih --</option>{jabatan.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
                   <div className="col-md-6"><label className="form-label">Jenis Surat</label><select className="form-select" value={form.jenisSurat} onChange={e => onDocTypeChange(e.target.value)}><option value="">-- Pilih --</option>{jenisSurat.map(j => <option key={j.nama} value={j.nama}>{j.nama}</option>)}</select></div>
-                  <div className="col-md-6"><label className="form-label">Nomor Surat</label><input type="text" className="form-control" value={form.nomorSurat} readOnly style={{background:'#f0fdf4',fontWeight:600,color:'#065f46'}} /></div>
+                  <div className="col-md-6">
+                    <label className="form-label">Nomor Surat</label>
+                    <input type="text" className="form-control" value="Akan digenerate saat disetujui" readOnly style={{background:'#f8fafc', fontWeight:600, color:'#64748b', fontStyle:'italic'}} />
+                  </div>
                   {form.jenisSurat === 'Internal Memo/IM' && (
                     <div className="col-md-6"><label className="form-label">Departemen</label><select className="form-select" value={form.departemen} onChange={e => onDeptChange(e.target.value)}><option value="">-- Pilih --</option>{departemenIM.map(d => <option key={d.nama} value={d.nama}>{d.nama}</option>)}</select></div>
                   )}

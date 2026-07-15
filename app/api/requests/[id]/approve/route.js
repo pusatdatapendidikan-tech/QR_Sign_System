@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth } from '@/lib/googleSheets';
+import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth, generateDocNumber } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
-import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
+import { getWIBDate } from '@/lib/utils';
 import { google } from 'googleapis';
 
 export async function POST(req, { params }) {
@@ -12,7 +12,7 @@ export async function POST(req, { params }) {
     if (!session.user) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     
     const { approverName } = await req.json();
-    const data = await readSheet(CONFIG.SHEETS.REQUESTS);
+    const data = await readSheet(CONFIG.SHEETS.REQUESTS, false);
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === params.id) {
@@ -22,33 +22,44 @@ export async function POST(req, { params }) {
         
         const r = i + 1;
         const fileUrl = data[i][10]; 
-        const docNumber = data[i][7] || '-';
+        let docNumber = data[i][7] || '-';
+        const docType = data[i][6];
+        const departemen = data[i][22] || ''; // Ambil departemen dari kolom 23 (index 22)
         
-        // 1. Update status di Google Sheets
+        // 1. GENERATE NOMOR SURAT JIKA MASIH KOSONG (-)
+        if (docNumber === '-' && docType && docType !== '-') {
+          try {
+            docNumber = await generateDocNumber(docType, departemen);
+            await updateCell(CONFIG.SHEETS.REQUESTS, r, 8, docNumber); // Update kolom 8 (Nomor Surat)
+          } catch (e) {
+            console.error('Gagal generate nomor surat:', e);
+          }
+        }
+
+        // 2. Update status di Google Sheets
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Disetujui');
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 14, approverName);
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 15, getWIBDate());
 
-                // 1.5. Update status di Sheet Jenis Surat (Sheet Surat)
-        const docType = data[i][6]; // Ambil jenis surat (kolom ke-7 / index 6)
+        // 3. Update status & Nomor Surat di Sheet Jenis Surat
         if (docType && docType !== '-') {
           try {
-            const safeName = docType.replace(/[\/\\:*?"<>|]/g, '-').trim(); // Samakan format nama sheet
-            const sheetData = await readSheet(safeName, false); // Baca data di sheet surat tersebut tanpa cache
+            const safeName = docType.replace(/[\/\\:*?"<>|]/g, '-').trim();
+            const sheetData = await readSheet(safeName, false);
             
             for (let j = 1; j < sheetData.length; j++) {
-              if (sheetData[j][1] === params.id) { // Cari baris yang ID-nya sama (ID ada di kolom B / index 1)
-                await updateCell(safeName, j + 1, 10, 'Disetujui'); // Update kolom 10 (Status) menjadi Disetujui
-                break; // Berhenti mencari setelah ketemu
+              if (sheetData[j][1] === params.id) {
+                await updateCell(safeName, j + 1, 3, docNumber); // Update kolom 3 (Nomor Surat)
+                await updateCell(safeName, j + 1, 10, 'Disetujui'); // Update kolom 10 (Status)
+                break;
               }
             }
           } catch (sheetErr) {
             console.error('Gagal update status di sheet surat:', sheetErr.message);
-            // Abaikan error jika sheet tidak ditemukan, agar proses approve tetap lanjut
           }
         }
         
-        // 2. Proses Replace {{QR_CODE}} dengan Gambar Barcode/QR di Google Docs
+        // 4. Proses Replace {{QR_CODE}} dengan Gambar Barcode/QR di Google Docs
         let qrWarning = '';
         
         if (fileUrl && fileUrl.includes('docs.google.com')) {
@@ -58,36 +69,19 @@ export async function POST(req, { params }) {
             
             if (docIdMatch) {
               const docId = docIdMatch[1];
-              // 1. Perbaiki typo double slash
               const verifyUrl = `https://qr-sign-systemgen.vercel.app/verify/${params.id}`; 
-              
-              // 2. Gunakan logo PNG lokal, hapus fallback webp yang bikin error
-              const logoUrl = CONFIG.LOGO_URL || 'https://i.imgur.com/bqK21qf.png'; 
-              
-              // 3. QuickChart API
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(verifyUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
-              // Step A: Replace teks {{QR_CODE}} dan {{NO_SURAT}}
+              
               await docs.documents.batchUpdate({
                 documentId: docId,
                 requestBody: {
                   requests: [
-                    {
-                      replaceAllText: {
-                        containsText: { text: '{{QR_CODE}}', matchCase: true },
-                        replaceText: '§' // Placeholder untuk gambar
-                      }
-                    },
-                    {
-                      replaceAllText: {
-                        containsText: { text: '{{NO_SURAT}}', matchCase: true },
-                        replaceText: docNumber // <--- GANTI DENGAN NOMOR SURAT DARI DATABASE
-                      }
-                    }
+                    { replaceAllText: { containsText: { text: '{{QR_CODE}}', matchCase: true }, replaceText: '§' } },
+                    { replaceAllText: { containsText: { text: '{{NO_SURAT}}', matchCase: true }, replaceText: docNumber } }
                   ]
                 }
               });
 
-              // Step B: Ambil struktur dokumen terbaru dan cari index § secara presisi
               const updatedDoc = await docs.documents.get({ documentId: docId });
               let placeholderIndex = -1;
               
@@ -96,7 +90,6 @@ export async function POST(req, { params }) {
                   for (const pe of element.paragraph.elements) {
                     const content = pe.textRun?.content || '';
                     if (content.includes('§')) {
-                      // Gunakan startIndex resmi dari Google Docs + posisi karakter §
                       placeholderIndex = pe.startIndex + content.indexOf('§');
                       break;
                     }
@@ -106,27 +99,12 @@ export async function POST(req, { params }) {
               }
 
               if (placeholderIndex !== -1) {
-                // Step C: Insert gambar QR dan hapus placeholder §
                 await docs.documents.batchUpdate({
                   documentId: docId,
                   requestBody: {
                     requests: [
-                      {
-                        insertInlineImage: {
-                          location: { index: placeholderIndex },
-                          uri: qrImageUrl,
-                          objectSize: { 
-                            height: { magnitude: 75, unit: 'PT' }, // Ukuran QR Code
-                            width: { magnitude: 75, unit: 'PT' } 
-                          }
-                        }
-                      },
-                      {
-                        // Hapus TEPAT 1 karakter (§) yang bergeser ke kanan karena gambar masuk
-                        deleteContentRange: {
-                          range: { startIndex: placeholderIndex + 1, endIndex: placeholderIndex + 2 }
-                        }
-                      }
+                      { insertInlineImage: { location: { index: placeholderIndex }, uri: qrImageUrl, objectSize: { height: { magnitude: 75, unit: 'PT' }, width: { magnitude: 75, unit: 'PT' } } } },
+                      { deleteContentRange: { range: { startIndex: placeholderIndex + 1, endIndex: placeholderIndex + 2 } } }
                     ]
                   }
                 });
@@ -144,7 +122,7 @@ export async function POST(req, { params }) {
         
         return NextResponse.json({ 
           success: true, 
-          message: `Permintaan berhasil disetujui${qrWarning}` 
+          message: `Permintaan berhasil disetujui dengan Nomor Surat: ${docNumber}${qrWarning}` 
         });
       }
     }
