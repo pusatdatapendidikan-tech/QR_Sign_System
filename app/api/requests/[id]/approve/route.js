@@ -88,62 +88,66 @@ export async function POST(req, { params }) {
             const qrImageBytes = await qrRes.arrayBuffer();
             const qrImage = await pdfDoc.embedPng(qrImageBytes); // Asumsi API mengembalikan PNG
 
-            // A3. Setup Font & Halaman
+            // A3. Setup Font & Ambil SEMUA Halaman
             const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            const page = pdfDoc.getPage(0); 
-            const { width, height } = page.getSize();
+            const pages = pdfDoc.getPages(); // <--- Mengambil semua halaman, bukan hanya halaman 1
 
-            // A4. Hitung Koordinat Dinamis berdasarkan Posisi yang dipilih User
-            const qrSize = 100; 
-            const margin = 40; // Jarak dari tepi kertas
-            const posisiTTD = data[i][23] || 'Kanan Bawah'; // Ambil dari kolom ke-24 (index 23)
-            
-            let xPosition = 0;
-            let yPosition = 0;
+            // Looping untuk menempelkan QR & Nomor di setiap halaman
+            for (const page of pages) {
+              const { width, height } = page.getSize(); // Ukuran bisa beda-beda tiap halaman
 
-            switch (posisiTTD) {
-              case 'Kiri Bawah':
-                xPosition = margin;
-                yPosition = 85; // <--- DINAIIKAN DARI margin (40) MENJADI 80
-                break;
-              case 'Tengah Bawah':
-                xPosition = (width - qrSize) / 2;
-                yPosition = 85; // <--- DINAIIKAN DARI margin (40) MENJADI 80
-                break;
-              case 'Kanan Atas':
-                xPosition = width - qrSize - margin;
-                yPosition = height - qrSize - margin;
-                break;
-              case 'Kiri Atas':
-                xPosition = margin;
-                yPosition = height - qrSize - margin;
-                break;
-              case 'Kanan Bawah':
-              default:
-                xPosition = width - qrSize - margin;
-                yPosition = 85; // <--- DINAIIKAN DARI margin (40) MENJADI 80
-                break;
-            }
+              // A4. Hitung Koordinat Dinamis berdasarkan Posisi yang dipilih User
+              const qrSize = 100; 
+              const margin = 40; 
+              const posisiTTD = data[i][23] || 'Kanan Bawah'; 
+              
+              let xPosition = 0;
+              let yPosition = 0;
 
-            // A5. Tempel QR Code ke PDF (Kode ini biarkan tetap seperti sebelumnya)
-            page.drawImage(qrImage, {
-              x: xPosition,
-              y: yPosition,
-              width: qrSize,
-              height: qrSize,
-            });
+              switch (posisiTTD) {
+                case 'Kiri Bawah':
+                  xPosition = margin;
+                  yPosition = 80; 
+                  break;
+                case 'Tengah Bawah':
+                  xPosition = (width - qrSize) / 2;
+                  yPosition = 80; 
+                  break;
+                case 'Kanan Atas':
+                  xPosition = width - qrSize - margin;
+                  yPosition = height - qrSize - margin;
+                  break;
+                case 'Kiri Atas':
+                  xPosition = margin;
+                  yPosition = height - qrSize - margin;
+                  break;
+                case 'Kanan Bawah':
+                default:
+                  xPosition = width - qrSize - margin;
+                  yPosition = 80; 
+                  break;
+              }
 
-            // A6. Tempel Nomor Sertifikat di TENGAH ATAS halaman (Diturunkan & Font Diperbesar)
-            const textFontSize = 17; // Diperbesar dari 12 menjadi 18 agar lebih jelas di sertifikat
-            const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
-            
-            page.drawText(docNumber, {
-              x: (width - textWidth) / 2, // Tetap di tengah horizontal
-              y: height - 145,            // Diturunkan: dari (height - 60) menjadi (height - 120). Semakin besar angkanya, semakin ke bawah posisinya.
-              size: textFontSize,          
-              font: font,
-              color: rgb(0, 0, 0),        
-            });
+              // A5. Tempel QR Code ke halaman ini
+              page.drawImage(qrImage, {
+                x: xPosition,
+                y: yPosition,
+                width: qrSize,
+                height: qrSize,
+              });
+
+              // A6. Tempel Nomor Sertifikat di halaman ini
+              const textFontSize = 18; 
+              const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
+              
+              page.drawText(docNumber, {
+                x: (width - textWidth) / 2, 
+                y: height - 120,             
+                size: textFontSize,          
+                font: font,
+                color: rgb(0, 0, 0),        
+              });
+            } // Akhir loop halaman
 
             // A7. Simpan PDF yang sudah diubah & Upload kembali ke Google Drive (Timpa file lama)
             const modifiedPdfBytes = await pdfDoc.save();
