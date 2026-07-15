@@ -133,13 +133,13 @@ export async function POST(req, { params }) {
               height: qrSize,
             });
 
-            // A6. Tempel Nomor Sertifikat di TENGAH ATAS halaman (Tidak mengikuti QR)
-            const textFontSize = 12; // Sedikit diperbesar agar jelas di sertifikat
+            // A6. Tempel Nomor Sertifikat di TENGAH ATAS halaman (Diturunkan & Font Diperbesar)
+            const textFontSize = 18; // Diperbesar dari 12 menjadi 18 agar lebih jelas di sertifikat
             const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
             
             page.drawText(docNumber, {
-              x: (width - textWidth) / 2, // X: Menghitung titik tengah halaman secara horizontal
-              y: height - 60,             // Y: 60 pixel dari tepi atas halaman (bisa disesuaikan)
+              x: (width - textWidth) / 2, // Tetap di tengah horizontal
+              y: height - 120,            // Diturunkan: dari (height - 60) menjadi (height - 120). Semakin besar angkanya, semakin ke bawah posisinya.
               size: textFontSize,          
               font: font,
               color: rgb(0, 0, 0),        
