@@ -85,9 +85,7 @@ export default function Layout({ user, children }) {
       <div className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`} onClick={() => setSidebarOpen(false)} />
       <nav className={`sidebar ${collapsed ? 'collapsed' : ''} ${sidebarOpen ? 'show' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-icon">
-            <img src={CONFIG.LOGO_URL} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '2px' }} />
-          </div>
+          <img src={CONFIG.LOGO_URL} alt="Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain', marginRight: '12px', flexShrink: 0 }} />
           <div><h6>QR Sign</h6><small>Signature System</small></div>
         </div>
         <div className="sidebar-nav">
