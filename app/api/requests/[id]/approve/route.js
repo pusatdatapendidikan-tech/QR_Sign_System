@@ -52,7 +52,7 @@ export async function POST(req, { params }) {
         if (docType && docType !== '-') {
           try {
             const safeName = docType.replace(/[\/\\:*?"<>|]/g, '-').trim();
-            const sheetData = await readSheet(safeName, false);
+            const sheetData = await readSheet(safeName, true); // Diubah ke true agar memakai cache jika ada
             for (let j = 1; j < sheetData.length; j++) {
               if (sheetData[j][1] === params.id) {
                 await updateCell(safeName, j + 1, 3, docNumber);

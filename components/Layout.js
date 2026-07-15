@@ -40,7 +40,7 @@ export default function Layout({ user, children }) {
     };
 
     fetchBadge();
-    const interval = setInterval(fetchBadge, 60000); // Cek setiap 60 detik
+    const interval = setInterval(fetchBadge, 300000); // Cek setiap 5 menit (hemat kuota API)
 
     // TAMBAHKAN INI: Listener agar badge bisa di-refresh secara instan dari halaman lain
     const handleBadgeUpdate = () => fetchBadge();
