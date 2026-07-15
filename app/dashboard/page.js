@@ -9,7 +9,7 @@ Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
-  const [stats, setStats] = useState({ total:0, menunggu:0, diteruskan:0, disetujui:0, ditolak:0 });
+  const [stats, setStats] = useState({ total:0, menunggu:0, diteruskan:0, disetujui:0, ditolak:0, disetujuiUnread:0 });
   const [chartData, setChartData] = useState(null);
   const [chartFilter, setChartFilter] = useState({ year: new Date().getFullYear(), month: -1 });
 
@@ -21,7 +21,7 @@ export default function DashboardPage() {
   }, [user, chartFilter]);
 
   const loadStats = async (u) => {
-    const res = await fetch(`/api/dashboard?role=${u.role}&userName=${u.username}&signerRole=${u.signerRole||''}`).then(r => r.json());
+    const res = await fetch(`/api/dashboard?role=${u.role}&userName=${u.username}&signerRole=${u.signerRole||''}`, { cache: 'no-store' }).then(r => r.json());
     if (res.success) setStats(res.data);
   };
 
@@ -55,11 +55,12 @@ export default function DashboardPage() {
     );
   }
 
+  // UBAH BAGIAN INI: Menghapus Total Permintaan untuk User, dan Menambahkan Ditolak
   const statCards = user.role === 'user' ? [
-    { cls:'stat-blue', icon:'bi-file-earmark-text', value:stats.total, label:'Total Permintaan' },
     { cls:'stat-amber', icon:'bi-clock', value:stats.menunggu, label:'Menunggu' },
     { cls:'stat-purple', icon:'bi-share', value:stats.diteruskan, label:'Diteruskan' },
     { cls:'stat-green', icon:'bi-check-circle', value:stats.disetujui, label:'Disetujui' },
+    { cls:'stat-red', icon:'bi-x-circle', value:stats.ditolak, label:'Ditolak' },
   ] : user.role === 'atasan' ? [
     { cls:'stat-purple', icon:'bi-inbox', value:stats.diteruskan, label:'Menunggu Review' },
     { cls:'stat-green', icon:'bi-check-circle', value:stats.disetujui, label:'Disetujui' },
