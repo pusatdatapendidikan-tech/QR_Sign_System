@@ -394,14 +394,31 @@ export default function PermintaanPage() {
                       <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight:600}}>
                         <i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!
                       </p>
-                      <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
-                        1. Klik <strong>Share/Bagikan</strong> di Google Docs Anda.<br/>
-                        2. Ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
-                        <em style={{fontSize:11, opacity:0.8}}>(Jika tidak diatur ke Editor, sistem gagal menyisipkan QR Code saat disetujui)</em>
-                      </p>
+                      
+                      {/* Tambahkan pengecekan khusus Sertifikat */}
+                      {form.jenisSurat === 'Sertifikat' ? (
+                        <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
+                          1. Buat desain di Canva, lalu <strong>Download sebagai PDF</strong>.<br/>
+                          2. Upload file PDF tersebut ke <strong>Google Drive</strong>.<br/>
+                          3. Klik <strong>Share/Bagikan</strong>, ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
+                          4. Masukkan link Google Drive PDF di bawah ini.<br/>
+                          <em style={{fontSize:11, opacity:0.8}}>(Sistem akan otomatis menempelkan QR Code & Nomor Surat ke dalam PDF saat disetujui)</em>
+                        </p>
+                      ) : (
+                        <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
+                          1. Klik <strong>Share/Bagikan</strong> di Google Docs Anda.<br/>
+                          2. Ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
+                          <em style={{fontSize:11, opacity:0.8}}>(Jika tidak diatur ke Editor, sistem gagal menyisipkan QR Code saat disetujui)</em>
+                        </p>
+                      )}
+                      
                       <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
                       <p style={{fontSize:12,color:'#0369a1',margin:0,lineHeight:1.6}}>
-                        <i className="bi bi-info-circle me-1"></i>Pastikan template surat memiliki penanda <strong style={{background:'#dbeafe',padding:'1px 6px',borderRadius:4}}>{'{'}{'}QR_CODE{'}{'}'}</strong> dan <strong>{'{'}{'}NO_SURAT{'}{'}'}</strong> di tempat yang sesuai.
+                        <i className="bi bi-info-circle me-1"></i>
+                        {form.jenisSurat === 'Sertifikat' 
+                          ? 'Pastikan PDF sudah disiapkan di Google Drive.' 
+                          : <>Pastikan template surat memiliki penanda <strong style={{background:'#dbeafe',padding:'1px 6px',borderRadius:4}}>{'{'}{'}QR_CODE{'}{'}'}</strong> dan <strong>{'{'}{'}NO_SURAT{'}{'}'}</strong> di tempat yang sesuai.</>
+                        }
                       </p>
                     </div>
                     <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
