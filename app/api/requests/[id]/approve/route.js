@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth } from '@/lib/googleSheets';
+import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth, generateBatchDocNumbers } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
 import { getWIBDate } from '@/lib/utils';
@@ -76,90 +76,83 @@ export async function POST(req, { params }) {
             // ==========================================
             // ALUR A: PDF STAMPING (UNTUK SERTIFIKAT)
             // ==========================================
+          if (docType === 'Sertifikat' && fileUrl.includes('drive.google.com')) {
+            // ==========================================
+            // ALUR A: PDF STAMPING BATCH (UNTUK SERTIFIKAT)
+            // ==========================================
             const driveFileId = getDriveFileId(fileUrl);
             if (!driveFileId) throw new Error('Format link Google Drive PDF tidak valid.');
 
             // A1. Download PDF dari Google Drive
             const driveRes = await drive.files.get({ fileId: driveFileId, alt: 'media' }, { responseType: 'arraybuffer' });
             const pdfDoc = await PDFDocument.load(driveRes.data);
+            const pages = pdfDoc.getPages();
 
-            // A2. Download Gambar QR Code
-            const qrRes = await fetch(qrImageUrl);
-            const qrImageBytes = await qrRes.arrayBuffer();
-            const qrImage = await pdfDoc.embedPng(qrImageBytes); // Asumsi API mengembalikan PNG
+            // A2. Generate Nomor Surat BATCH (Semua halaman sekaligus)
+            const docNumbersArray = await generateBatchDocNumbers(docType, departemen, pages.length);
+            
+            // Simpan rentang nomor untuk database utama
+            const firstDocNumber = docNumbersArray[0];
+            const lastDocNumber = docNumbersArray[docNumbersArray.length - 1];
+            docNumber = pages.length > 1 ? `${firstDocNumber} s/d ${lastDocNumber}` : firstDocNumber;
+            await updateCell(CONFIG.SHEETS.REQUESTS, r, 8, docNumber);
 
-            // A3. Setup Font & Ambil SEMUA Halaman
+            // A3. Looping setiap halaman untuk tempel QR & Nomor Unik
             const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            const pages = pdfDoc.getPages(); // <--- Mengambil semua halaman, bukan hanya halaman 1
 
-            // Looping untuk menempelkan QR & Nomor di setiap halaman
-            for (const page of pages) {
-              const { width, height } = page.getSize(); // Ukuran bisa beda-beda tiap halaman
+            for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+              const page = pages[pageIndex];
+              const { width, height } = page.getSize();
+              const currentPageDocNumber = docNumbersArray[pageIndex];
 
-              // A4. Hitung Koordinat Dinamis berdasarkan Posisi yang dipilih User
+              // Buat URL Verifikasi unik per halaman
+              const verifyUrlPage = `${verifyUrl}?halaman=${pageIndex + 1}`; 
+              const qrImageUrlPage = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(verifyUrlPage)}&color=000000&bgcolor=FFFFFF&ecc=H`;
+              
+              // Download QR untuk halaman ini
+              const qrRes = await fetch(qrImageUrlPage);
+              const qrImageBytes = await qrRes.arrayBuffer();
+              const qrImage = await pdfDoc.embedPng(qrImageBytes);
+
+              // Hitung Kordinat (Sama seperti sebelumnya)
               const qrSize = 100; 
               const margin = 40; 
               const posisiTTD = data[i][23] || 'Kanan Bawah'; 
-              
               let xPosition = 0;
               let yPosition = 0;
 
               switch (posisiTTD) {
-                case 'Kiri Bawah':
-                  xPosition = margin;
-                  yPosition = 85; 
-                  break;
-                case 'Tengah Bawah':
-                  xPosition = (width - qrSize) / 2;
-                  yPosition = 85; 
-                  break;
-                case 'Kanan Atas':
-                  xPosition = width - qrSize - margin;
-                  yPosition = height - qrSize - margin;
-                  break;
-                case 'Kiri Atas':
-                  xPosition = margin;
-                  yPosition = height - qrSize - margin;
-                  break;
-                case 'Kanan Bawah':
-                default:
-                  xPosition = width - qrSize - margin;
-                  yPosition = 85; 
-                  break;
+                case 'Kiri Bawah': xPosition = margin; yPosition = 85; break;
+                case 'Tengah Bawah': xPosition = (width - qrSize) / 2; yPosition = 85; break;
+                case 'Kanan Atas': xPosition = width - qrSize - margin; yPosition = height - qrSize - margin; break;
+                case 'Kiri Atas': xPosition = margin; yPosition = height - qrSize - margin; break;
+                case 'Kanan Bawah': default: xPosition = width - qrSize - margin; yPosition = 85; break;
               }
 
-              // A5. Tempel QR Code ke halaman ini
-              page.drawImage(qrImage, {
-                x: xPosition,
-                y: yPosition,
-                width: qrSize,
-                height: qrSize,
-              });
+              // Tempel QR Code
+              page.drawImage(qrImage, { x: xPosition, y: yPosition, width: qrSize, height: qrSize });
 
-              // A6. Tempel Nomor Sertifikat di halaman ini
+              // Tempel Nomor Sertifikat Unik
               const textFontSize = 17; 
-              const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
-              
-              page.drawText(docNumber, {
+              const textWidth = font.widthOfTextAtSize(currentPageDocNumber, textFontSize);
+              page.drawText(currentPageDocNumber, {
                 x: (width - textWidth) / 2, 
                 y: height - 145,             
                 size: textFontSize,          
                 font: font,
                 color: rgb(0, 0, 0),        
               });
-            } // Akhir loop halaman
+            }
 
-            // A7. Simpan PDF yang sudah diubah & Upload kembali ke Google Drive (Timpa file lama)
+            // A4. Simpan PDF yang sudah diubah & Upload kembali
             const modifiedPdfBytes = await pdfDoc.save();
             const buffer = Buffer.from(modifiedPdfBytes);
             
             await drive.files.update({
               fileId: driveFileId,
-              media: {
-                mimeType: 'application/pdf',
-                body: Readable.from(buffer),
-              },
+              media: { mimeType: 'application/pdf', body: Readable.from(buffer) },
             });
+          }
 
           } else if (fileUrl.includes('docs.google.com')) {
             // ==========================================

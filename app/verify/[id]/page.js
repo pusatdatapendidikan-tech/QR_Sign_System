@@ -14,11 +14,15 @@ export default function VerifyPage() {
 
   const fetchVerification = async () => {
     try {
-      const res = await fetch(`/api/verify/${id}`).then(r => r.json());
+      // Ambil parameter ?halaman= dari URL
+      const queryParams = new URLSearchParams(window.location.search);
+      const halaman = queryParams.get('halaman') || 1;
+
+      const res = await fetch(`/api/verify/${id}?halaman=${halaman}`).then(r => r.json());
       if (res.success) {
         setData(res.data);
       } else {
-        setError('Dokumen tidak valid, belum disetujui, atau tidak ditemukan.');
+        setError(res.message || 'Dokumen tidak valid, belum disetujui, atau tidak ditemukan.');
       }
     } catch (e) {
       setError('Terjadi kesalahan saat menghubungi server.');
