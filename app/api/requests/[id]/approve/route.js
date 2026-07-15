@@ -139,7 +139,7 @@ export async function POST(req, { params }) {
             
             page.drawText(docNumber, {
               x: (width - textWidth) / 2, // Tetap di tengah horizontal
-              y: height - 130,            // Diturunkan: dari (height - 60) menjadi (height - 120). Semakin besar angkanya, semakin ke bawah posisinya.
+              y: height - 145,            // Diturunkan: dari (height - 60) menjadi (height - 120). Semakin besar angkanya, semakin ke bawah posisinya.
               size: textFontSize,          
               font: font,
               color: rgb(0, 0, 0),        
