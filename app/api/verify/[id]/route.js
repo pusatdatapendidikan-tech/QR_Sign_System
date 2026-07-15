@@ -44,17 +44,18 @@ export async function GET(req, { params }) {
         if (docNumberDisplay.includes(' s/d ')) {
           const [startStr] = docNumberDisplay.split(' s/d ');
           
-          // Ekstrak angka awal dan panjang digitnya (misal "001" -> angka 1, panjang 3 digit)
-          const numMatch = startStr.match(/^(0*)(\d+)/);
+          // Ekstrak BLOK angka di awal string (misal "001" dari "001/I/2024")
+          const numMatch = startStr.match(/^(\d+)/);
           if (numMatch) {
-            const startNum = parseInt(numMatch[2], 10);
+            const originalNumStr = numMatch[1]; // "001"
+            const startNum = parseInt(originalNumStr, 10); // 1
             const currentNum = startNum + (halaman - 1); // Hitung nomor urut halaman ini
             
-            // Format ulang dengan leading zero (angka nol di depan) sesuai panjang aslinya
-            const currentPaddedNum = String(currentNum).padStart(numMatch[2].length, '0');
+            // Format ulang dengan leading zero sesuai panjang string aslinya (3 digit)
+            const currentPaddedNum = String(currentNum).padStart(originalNumStr.length, '0'); // "012"
             
-            // Ganti angka awal di string dengan angka yang sudah dihitung
-            docNumberDisplay = startStr.replace(numMatch[0], currentPaddedNum);
+            // Ganti blok angka awal dengan angka yang sudah dihitung
+            docNumberDisplay = startStr.replace(originalNumStr, currentPaddedNum); // "012/I/2024"
           }
         }
         // ==========================================

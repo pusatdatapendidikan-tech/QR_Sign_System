@@ -7,6 +7,7 @@ export default function VerifyPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pageNum, setPageNum] = useState(1); // <--- TAMBAHKAN STATE UNTUK NOMOR HALAMAN
 
   useEffect(() => {
     if (id) fetchVerification();
@@ -17,6 +18,7 @@ export default function VerifyPage() {
       // Ambil parameter ?halaman= dari URL
       const queryParams = new URLSearchParams(window.location.search);
       const halaman = queryParams.get('halaman') || 1;
+      setPageNum(halaman); // <--- SIMPAN HALAMAN KE STATE
 
       const res = await fetch(`/api/verify/${id}?halaman=${halaman}`).then(r => r.json());
       if (res.success) {
@@ -107,13 +109,18 @@ export default function VerifyPage() {
           </div>
         </div>
 
-        {/* Tombol Lihat Dokumen Asli */}
+        {/* Tombol Lihat Dokumen Asli - SUDAH DIPERBAIKI */}
         {data.fileUrl && data.fileUrl !== '-' && (
-          <a href={data.fileUrl} target="_blank" rel="noopener noreferrer" style={{
-            display:'block', textAlign:'center', marginTop:20, background:'#059669', color:'white', 
-            padding:'10px 16px', borderRadius:8, textDecoration:'none', fontWeight:600, fontSize:14
-          }}>
-            📄 Lihat Dokumen Asli
+          <a 
+            href={`/api/requests/${id}/pdf?halaman=${pageNum}`} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={{
+              display:'block', textAlign:'center', marginTop:20, background:'#059669', color:'white', 
+              padding:'10px 16px', borderRadius:8, textDecoration:'none', fontWeight:600, fontSize:14
+            }}
+          >
+            📄 Lihat/Unduh Dokumen
           </a>
         )}
 
