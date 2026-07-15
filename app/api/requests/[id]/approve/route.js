@@ -104,11 +104,11 @@ export async function POST(req, { params }) {
             switch (posisiTTD) {
               case 'Kiri Bawah':
                 xPosition = margin;
-                yPosition = 80; // <--- DINAIIKAN DARI margin (40) MENJADI 80
+                yPosition = 85; // <--- DINAIIKAN DARI margin (40) MENJADI 80
                 break;
               case 'Tengah Bawah':
                 xPosition = (width - qrSize) / 2;
-                yPosition = 80; // <--- DINAIIKAN DARI margin (40) MENJADI 80
+                yPosition = 85; // <--- DINAIIKAN DARI margin (40) MENJADI 80
                 break;
               case 'Kanan Atas':
                 xPosition = width - qrSize - margin;
@@ -121,7 +121,7 @@ export async function POST(req, { params }) {
               case 'Kanan Bawah':
               default:
                 xPosition = width - qrSize - margin;
-                yPosition = 80; // <--- DINAIIKAN DARI margin (40) MENJADI 80
+                yPosition = 85; // <--- DINAIIKAN DARI margin (40) MENJADI 80
                 break;
             }
 
