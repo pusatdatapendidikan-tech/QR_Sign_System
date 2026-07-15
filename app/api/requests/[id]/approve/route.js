@@ -107,11 +107,11 @@ export async function POST(req, { params }) {
               switch (posisiTTD) {
                 case 'Kiri Bawah':
                   xPosition = margin;
-                  yPosition = 80; 
+                  yPosition = 85; 
                   break;
                 case 'Tengah Bawah':
                   xPosition = (width - qrSize) / 2;
-                  yPosition = 80; 
+                  yPosition = 85; 
                   break;
                 case 'Kanan Atas':
                   xPosition = width - qrSize - margin;
@@ -124,7 +124,7 @@ export async function POST(req, { params }) {
                 case 'Kanan Bawah':
                 default:
                   xPosition = width - qrSize - margin;
-                  yPosition = 80; 
+                  yPosition = 85; 
                   break;
               }
 
@@ -137,12 +137,12 @@ export async function POST(req, { params }) {
               });
 
               // A6. Tempel Nomor Sertifikat di halaman ini
-              const textFontSize = 18; 
+              const textFontSize = 17; 
               const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
               
               page.drawText(docNumber, {
                 x: (width - textWidth) / 2, 
-                y: height - 120,             
+                y: height - 145,             
                 size: textFontSize,          
                 font: font,
                 color: rgb(0, 0, 0),        
