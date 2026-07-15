@@ -125,7 +125,7 @@ export async function POST(req, { params }) {
                 break;
             }
 
-            // A5. Tempel QR Code ke PDF
+            // A5. Tempel QR Code ke PDF (Kode ini biarkan tetap seperti sebelumnya)
             page.drawImage(qrImage, {
               x: xPosition,
               y: yPosition,
@@ -133,14 +133,16 @@ export async function POST(req, { params }) {
               height: qrSize,
             });
 
-            // A6. Tempel Nomor Surat di atas QR Code
-            const textWidth = font.widthOfTextAtSize(docNumber, 10);
+            // A6. Tempel Nomor Sertifikat di TENGAH ATAS halaman (Tidak mengikuti QR)
+            const textFontSize = 12; // Sedikit diperbesar agar jelas di sertifikat
+            const textWidth = font.widthOfTextAtSize(docNumber, textFontSize);
+            
             page.drawText(docNumber, {
-              x: xPosition + (qrSize - textWidth) / 2, 
-              y: yPosition + qrSize + 10, 
-              size: 10,
+              x: (width - textWidth) / 2, // X: Menghitung titik tengah halaman secara horizontal
+              y: height - 60,             // Y: 60 pixel dari tepi atas halaman (bisa disesuaikan)
+              size: textFontSize,          
               font: font,
-              color: rgb(0, 0, 0),
+              color: rgb(0, 0, 0),        
             });
 
             // A7. Simpan PDF yang sudah diubah & Upload kembali ke Google Drive (Timpa file lama)
