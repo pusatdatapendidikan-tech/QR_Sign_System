@@ -34,8 +34,8 @@ export async function POST(req, { params }) {
         const docType = data[i][6];
         const departemen = data[i][22] || '';
         
-        // 1. GENERATE NOMOR SURAT
-        if (docNumber === '-' && docType && docType !== '-') {
+        // 1. GENERATE NOMOR SURAT (KECUALI SERTIFIKAT, KARENA AKAN DI-HANDLE PAKAI BATCH DI BAWAH)
+        if (docNumber === '-' && docType && docType !== '-' && docType !== 'Sertifikat') {
           try {
             const { generateDocNumber } = await import('@/lib/googleSheets');
             docNumber = await generateDocNumber(docType, departemen);
