@@ -90,13 +90,40 @@ export async function POST(req, { params }) {
 
             // A3. Setup Font & Halaman
             const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-            const page = pdfDoc.getPage(0); // Ambil halaman pertama
+            const page = pdfDoc.getPage(0); 
             const { width, height } = page.getSize();
 
-            // A4. Tentukan Koordinat & Ukuran (Dapat disesuaikan)
-            const qrSize = 100; // Ukuran QR Code (lebar & tinggi)
-            const xPosition = width - qrSize - 40; // Posisi X: 40 pixel dari kanan
-            const yPosition = 40; // Posisi Y: 40 pixel dari bawah
+            // A4. Hitung Koordinat Dinamis berdasarkan Posisi yang dipilih User
+            const qrSize = 100; 
+            const margin = 40; // Jarak dari tepi kertas
+            const posisiTTD = data[i][23] || 'Kanan Bawah'; // Ambil dari kolom ke-24 (index 23)
+            
+            let xPosition = 0;
+            let yPosition = 0;
+
+            switch (posisiTTD) {
+              case 'Kiri Bawah':
+                xPosition = margin;
+                yPosition = margin;
+                break;
+              case 'Tengah Bawah':
+                xPosition = (width - qrSize) / 2;
+                yPosition = margin;
+                break;
+              case 'Kanan Atas':
+                xPosition = width - qrSize - margin;
+                yPosition = height - qrSize - margin;
+                break;
+              case 'Kiri Atas':
+                xPosition = margin;
+                yPosition = height - qrSize - margin;
+                break;
+              case 'Kanan Bawah':
+              default:
+                xPosition = width - qrSize - margin;
+                yPosition = margin;
+                break;
+            }
 
             // A5. Tempel QR Code ke PDF
             page.drawImage(qrImage, {
@@ -109,11 +136,11 @@ export async function POST(req, { params }) {
             // A6. Tempel Nomor Surat di atas QR Code
             const textWidth = font.widthOfTextAtSize(docNumber, 10);
             page.drawText(docNumber, {
-              x: xPosition + (qrSize - textWidth) / 2, // Posisi teks di tengah atas QR
-              y: yPosition + qrSize + 10, // 10 pixel di atas QR
+              x: xPosition + (qrSize - textWidth) / 2, 
+              y: yPosition + qrSize + 10, 
               size: 10,
               font: font,
-              color: rgb(0, 0, 0), // Warna Hitam
+              color: rgb(0, 0, 0),
             });
 
             // A7. Simpan PDF yang sudah diubah & Upload kembali ke Google Drive (Timpa file lama)

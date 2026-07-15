@@ -70,7 +70,7 @@ export async function POST(req) {
       id, d.requesterName, d.requesterUsername, d.division, d.position,
       d.requestType, docType, docNumber, d.perihal || '-',
       d.targetSigner || '-', d.fileUrl || '-', d.fileName || '-',
-      'Menunggu', '-', '-', '-', '-', '-', getWIBDate(), '-', '-', false, departemen || '-', // <--- TAMBAHKAN departemen di akhir
+      'Menunggu', '-', '-', '-', '-', '-', getWIBDate(), '-', '-', false, departemen || '-', d.posisiTTD || 'Kanan Bawah', // <--- TAMBAHKAN DI AKHIR
     ]);
     
     if (docType && docType !== '-') {

@@ -20,7 +20,7 @@ export default function PermintaanPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState('');
-  const [form, setForm] = useState({ nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'' });
+  const [form, setForm] = useState({ nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'', posisiTTD: 'Kanan Bawah' });
 
   useEffect(() => {
     if (user) {
@@ -95,6 +95,7 @@ export default function PermintaanPage() {
         requestType: 'Tanda Tangan',
         documentType: form.jenisSurat,
         departemen: form.departemen || '',
+        posisiTTD: form.posisiTTD || 'Kanan Bawah',
         perihal: form.perihal || '-',
         targetSigner: form.tujuanTtd,
         fileUrl: form.docLink,
@@ -380,6 +381,20 @@ export default function PermintaanPage() {
                       <select className="form-select" value={form.departemen} onChange={e => onDeptChange(e.target.value)}>
                         <option value="">-- Pilih --</option>
                         {departemenIM.map(d => <option key={d.nama} value={d.nama}>{d.nama}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  
+                  {/* TAMBAHKAN DROPDOWN INI */}
+                  {form.jenisSurat === 'Sertifikat' && (
+                    <div className="col-md-6">
+                      <label className="form-label">Posisi TTD / QR Code</label>
+                      <select className="form-select" value={form.posisiTTD} onChange={e => setForm({...form, posisiTTD: e.target.value})}>
+                        <option value="Kanan Bawah">Kanan Bawah</option>
+                        <option value="Kiri Bawah">Kiri Bawah</option>
+                        <option value="Tengah Bawah">Tengah Bawah</option>
+                        <option value="Kanan Atas">Kanan Atas</option>
+                        <option value="Kiri Atas">Kiri Atas</option>
                       </select>
                     </div>
                   )}
