@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, updateCell, clearSheetCache } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
+import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
 
 export async function POST(req, { params }) {
@@ -21,7 +22,7 @@ export async function POST(req, { params }) {
         const r = i + 1;
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Ditolak');
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 16, rejecterName);
-        await updateCell(CONFIG.SHEETS.REQUESTS, r, 17, new Date().toISOString());
+        await updateCell(CONFIG.SHEETS.REQUESTS, r, 16, getWIBDate());
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 18, reason || '-');
         
         // Bersihkan cache

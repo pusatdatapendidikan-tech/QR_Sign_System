@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
+import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
 import { google } from 'googleapis';
 
@@ -26,7 +27,7 @@ export async function POST(req, { params }) {
         // 1. Update status di Google Sheets
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Disetujui');
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 14, approverName);
-        await updateCell(CONFIG.SHEETS.REQUESTS, r, 15, new Date().toISOString());
+        await updateCell(CONFIG.SHEETS.REQUESTS, r, 15, getWIBDate());
 
                 // 1.5. Update status di Sheet Jenis Surat (Sheet Surat)
         const docType = data[i][6]; // Ambil jenis surat (kolom ke-7 / index 6)

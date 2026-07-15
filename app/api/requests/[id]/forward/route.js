@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, updateCell, clearSheetCache } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
+import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
 
 export async function POST(req, { params }) {
@@ -20,7 +21,7 @@ export async function POST(req, { params }) {
         const r = i + 1;
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Diteruskan');
         await updateCell(CONFIG.SHEETS.REQUESTS, r, 20, forwarderName);
-        await updateCell(CONFIG.SHEETS.REQUESTS, r, 21, new Date().toISOString());
+        await updateCell(CONFIG.SHEETS.REQUESTS, r, 20, getWIBDate());
         
         // Bersihkan cache
         clearSheetCache(CONFIG.SHEETS.REQUESTS);

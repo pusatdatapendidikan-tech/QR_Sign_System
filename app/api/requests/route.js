@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, appendRow, ensureDocTypeSheet, updateCell, clearSheetCache } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
-import { generateId, formatDate, generateDocumentNumber } from '@/lib/utils';
+import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
 
 async function getJenisSurat() {
@@ -138,7 +138,7 @@ export async function POST(req) {
       id, d.requesterName, d.requesterUsername, d.division, d.position,
       d.requestType, docType, docNumber, d.perihal || '-',
       d.targetSigner || '-', d.fileUrl || '-', d.fileName || '-',
-      'Menunggu', '-', '-', '-', '-', '-', new Date().toISOString(), '-', '-', false,
+      'Menunggu', '-', '-', '-', '-', '-', getWIBDate(), '-', '-', false,
     ]);
     
     if (docType && docType !== '-') {
@@ -148,7 +148,7 @@ export async function POST(req) {
       await appendRow(safeName, [
         nextNo, id, docNumber, d.requesterName || '-', d.division || '-',
         d.position || '-', d.requestType || '-', d.targetSigner || '-',
-        departemen, 'Menunggu', new Date().toISOString(),
+        departemen, 'Menunggu', getWIBDate(),
       ]);
     }
     
