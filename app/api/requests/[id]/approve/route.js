@@ -97,12 +97,14 @@ export async function POST(req, { params }) {
               // ---- SEMUA KODE SLIDES API (C1 sampai C6) DIMASUKKAN KE DALAM `else` INI ----
               
               // C1. Duplikasi Master Template
+              console.log('DEBUG FOLDER ID:', CONFIG.SHARED_DRIVE_ID); // <--- TAMBAHKAN INI
+              
               const copyRes = await drive.files.copy({
                 fileId: CONFIG.TEMPLATE_SERTIFIKAT_ID,
-                supportsAllDrives: true, // Wajib ditambahkan agar bisa akses Shared Drive
+                supportsAllDrives: true, 
                 requestBody: { 
                   name: `Sertifikat - ${namaKegiatan}`,
-                  parents: [CONFIG.SHARED_DRIVE_ID] // Arahkan langsung ke Shared Drive agar tidak memakan kuota Service Account
+                  parents: [CONFIG.SHARED_DRIVE_ID] 
                 }
               });
               const newPresId = copyRes.data.id;
