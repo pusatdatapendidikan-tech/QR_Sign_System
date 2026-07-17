@@ -20,7 +20,7 @@ export default function PermintaanPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState('');
-  const [form, setForm] = useState({ nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'', posisiTTD: 'Kanan Bawah' });
+  const [form, setForm] = useState({ nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'', posisiTTD:'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'' });
 
   useEffect(() => {
     if (user) {
@@ -95,11 +95,13 @@ export default function PermintaanPage() {
         requestType: 'Tanda Tangan',
         documentType: form.jenisSurat,
         departemen: form.departemen || '',
-        posisiTTD: form.posisiTTD || 'Kanan Bawah',
         perihal: form.perihal || '-',
         targetSigner: form.tujuanTtd,
-        fileUrl: form.docLink,
-        fileName: 'Google Docs Template',
+        fileUrl: form.jenisSurat === 'Sertifikat' ? 'AUTO_GENERATED' : form.docLink, // <--- Jika sertifikat, link auto
+        fileName: form.jenisSurat === 'Sertifikat' ? 'Sertifikat Batch' : 'Google Docs Template',
+        namaKegiatan: form.namaKegiatan || '-',
+        tanggalKegiatan: form.tanggalKegiatan || '-',
+        daftarPeserta: form.daftarPeserta || '-',
       };
       
       let res;
@@ -120,14 +122,12 @@ export default function PermintaanPage() {
 
         // Validasi khusus: Sertifikat harus link Google Drive, lainnya harus Google Docs
         if (form.jenisSurat === 'Sertifikat') {
-          if (form.docLink.indexOf('drive.google.com') === -1) {
-            Swal.close();
-            Swal.fire({icon:'warning', title:'Perhatian', text:'Untuk Sertifikat, masukkan link Google Drive (PDF) yang valid', confirmButtonColor:'#1d4ed8'});
+          if (!form.namaKegiatan || !form.daftarPeserta) {
+            Swal.fire({icon:'warning', title:'Perhatian', text:'Nama Kegiatan dan Daftar Peserta wajib diisi untuk Sertifikat', confirmButtonColor:'#1d4ed8'});
             return;
           }
         } else {
-          if (form.docLink.indexOf('docs.google.com') === -1) {
-            Swal.close();
+          if (!form.docLink || form.docLink.indexOf('docs.google.com') === -1) {
             Swal.fire({icon:'warning', title:'Perhatian', text:'Masukkan link Google Docs yang valid', confirmButtonColor:'#1d4ed8'});
             return;
           }
@@ -617,10 +617,51 @@ export default function PermintaanPage() {
                   <div className="col-12"><label className="form-label">Perihal</label><input type="text" className="form-control" value={form.perihal} onChange={e => setForm({...form, perihal: e.target.value})} /></div>
                   <div className="col-md-6"><label className="form-label">Tujuan Tanda Tangan</label><select className="form-select" value={form.tujuanTtd} onChange={e => onSignerChange(e.target.value)}><option value="">-- Pilih --</option>{signers.map(s => <option key={s.jabatan} value={s.jabatan}>{s.jabatan}</option>)}</select></div>
                   <div className="col-md-6"><label className="form-label">Nama Penandatangan</label><input type="text" className="form-control" value={form.namaSigner} readOnly style={{background:'#f8fafc'}} /></div>
-                  <div className="col-12">
-                    <label className="form-label">Link Google Docs (Template Surat)</label>
-                    <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
-                  </div>
+
+                    {form.jenisSurat !== 'Sertifikat' && (
+                      <div className="col-12">
+                        <label className="form-label">Link Google Docs (Template Surat)</label>
+                        <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
+                          <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight:600}}>
+                            <i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!
+                          </p>
+                          <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>
+                            1. Klik <strong>Share/Bagikan</strong> di Google Docs Anda.<br/>
+                            2. Ubah akses menjadi <strong style={{background:'#fef3c7',padding:'1px 6px',borderRadius:4}}>Anyone with the link = Editor</strong>.<br/>
+                          </p>
+                          <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
+                          <p style={{fontSize:12,color:'#0369a1',margin:0,lineHeight:1.6}}>
+                            <i className="bi bi-info-circle me-1"></i>Pastikan template surat memiliki penanda <strong>{'{'}{'}QR_CODE{'}{'}'}</strong> dan <strong>{'{'}{'}NO_SURAT{'}{'}'}</strong>.
+                          </p>
+                        </div>
+                        <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
+                      </div>
+                    )}
+
+                    {/* JIKA SERTIFIKAT -> TAMPILKAN FORM BATCH GENERATION */}
+                    {form.jenisSurat === 'Sertifikat' && (
+                      <>
+                        <div className="col-md-6">
+                          <label className="form-label">Nama Kegiatan / Training</label>
+                          <input type="text" className="form-control" value={form.namaKegiatan} onChange={e => setForm({...form, namaKegiatan: e.target.value})} placeholder="Contoh: Pelatihan Leadership 2024" />
+                        </div>
+                        <div className="col-md-6">
+                          <label className="form-label">Tanggal Kegiatan</label>
+                          <input type="date" className="form-control" value={form.tanggalKegiatan} onChange={e => setForm({...form, tanggalKegiatan: e.target.value})} />
+                        </div>
+                        <div className="col-12">
+                          <label className="form-label">Daftar Nama Peserta</label>
+                          <textarea 
+                            className="form-control" 
+                            rows={5} 
+                            value={form.daftarPeserta} 
+                            onChange={e => setForm({...form, daftarPeserta: e.target.value})} 
+                            placeholder="Masukkan 1 nama per baris. Contoh:&#10;Budi Santoso&#10;Ani Lestari&#10;Dodi Pratama" 
+                          />
+                          <small className="text-muted">Sistem akan otomatis membuat 1 halaman sertifikat per nama. Logo dan data bisa diedit nanti di Google Slides.</small>
+                        </div>
+                      </>
+                    )}
                 </div>
               </div>
               <div className="modal-footer">
