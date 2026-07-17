@@ -99,7 +99,11 @@ export async function POST(req, { params }) {
               // C1. Duplikasi Master Template
               const copyRes = await drive.files.copy({
                 fileId: CONFIG.TEMPLATE_SERTIFIKAT_ID,
-                requestBody: { name: `Sertifikat - ${namaKegiatan}` }
+                supportsAllDrives: true, // Wajib ditambahkan agar bisa akses Shared Drive
+                requestBody: { 
+                  name: `Sertifikat - ${namaKegiatan}`,
+                  parents: [CONFIG.SHARED_DRIVE_ID] // Arahkan langsung ke Shared Drive agar tidak memakan kuota Service Account
+                }
               });
               const newPresId = copyRes.data.id;
               const newFileUrl = `https://docs.google.com/presentation/d/${newPresId}/edit`;
