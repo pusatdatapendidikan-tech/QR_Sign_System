@@ -88,72 +88,79 @@ export async function POST(req, { params }) {
             const daftarPesertaStr = data[i][26] || '';
             const pesertaList = daftarPesertaStr.split('\n').map(p => p.trim()).filter(p => p);
 
-            if (pesertaList.length === 0) throw new Error('Daftar peserta kosong.');
+            // Ubah: Jangan throw error, tapi lewati (skip) pembuatan slide jika peserta kosong
+            if (pesertaList.length === 0) {
+              console.warn('Data peserta tidak ditemukan di kolom AA. Kemungkinan data lama atau gagal tersimpan saat POST.');
+              qrWarning = '\\n\\n⚠️ Peringatan: Gagal membuat Sertifikat Otomatis karena Daftar Peserta tidak ditemukan di database. Harap buat permintaan Sertifikat baru.';
+            } else {
+              
+              // ---- SEMUA KODE SLIDES API (C1 sampai C6) DIMASUKKAN KE DALAM `else` INI ----
+              
+              // C1. Duplikasi Master Template
+              const copyRes = await drive.files.copy({
+                fileId: CONFIG.TEMPLATE_SERTIFIKAT_ID,
+                requestBody: { name: `Sertifikat - ${namaKegiatan}` }
+              });
+              const newPresId = copyRes.data.id;
+              const newFileUrl = `https://docs.google.com/presentation/d/${newPresId}/edit`;
 
-            // C1. Duplikasi Master Template
-            const copyRes = await drive.files.copy({
-              fileId: CONFIG.TEMPLATE_SERTIFIKAT_ID,
-              requestBody: { name: `Sertifikat - ${namaKegiatan}` }
-            });
-            const newPresId = copyRes.data.id;
-            const newFileUrl = `https://docs.google.com/presentation/d/${newPresId}/edit`;
+              // Beri akses agar user bisa edit logonya nanti
+              await drive.permissions.create({
+                fileId: newPresId,
+                requestBody: { role: 'writer', type: 'anyone' }
+              });
 
-            // Beri akses agar user bisa edit logonya nanti
-            await drive.permissions.create({
-              fileId: newPresId,
-              requestBody: { role: 'writer', type: 'anyone' }
-            });
+              // C2. Dapatkan struktur slide & ID slide asli (template)
+              const presRes = await slides.presentations.get({ presentationId: newPresId });
+              const originalSlideId = presRes.data.slides[0].objectId;
 
-            // C2. Dapatkan struktur slide & ID slide asli (template)
-            const presRes = await slides.presentations.get({ presentationId: newPresId });
-            const originalSlideId = presRes.data.slides[0].objectId;
+              // C3. Generate Nomor Surat Batch
+              const docNumbersArray = await generateBatchDocNumbers(docType, departemen, pesertaList.length);
+              docNumber = pesertaList.length > 1 ? `${docNumbersArray[0]} s/d ${docNumbersArray[docNumbersArray.length - 1]}` : docNumbersArray[0];
+              await updateCell(CONFIG.SHEETS.REQUESTS, r, 8, docNumber);
+              await updateCell(CONFIG.SHEETS.REQUESTS, r, 11, newFileUrl); // Update fileUrl di Sheets
 
-            // C3. Generate Nomor Surat Batch
-            const docNumbersArray = await generateBatchDocNumbers(docType, departemen, pesertaList.length);
-            docNumber = pesertaList.length > 1 ? `${docNumbersArray[0]} s/d ${docNumbersArray[docNumbersArray.length - 1]}` : docNumbersArray[0];
-            await updateCell(CONFIG.SHEETS.REQUESTS, r, 8, docNumber);
-            await updateCell(CONFIG.SHEETS.REQUESTS, r, 11, newFileUrl); // Update fileUrl di Sheets
+              // C4. OPTIMASI: Duplikasi semua slide sekaligus
+              const duplicateRequests = pesertaList.map(() => ({
+                duplicateObject: { objectId: originalSlideId }
+              }));
+              const dupBatchRes = await slides.presentations.batchUpdate({
+                presentationId: newPresId,
+                requestBody: { requests: duplicateRequests }
+              });
+              
+              // Ambil ID slide yang baru saja diduplikasi
+              const newSlideIds = dupBatchRes.data.replies.map(rep => rep.duplicateObject.objectId);
 
-            // C4. OPTIMASI: Duplikasi semua slide sekaligus
-            const duplicateRequests = pesertaList.map(() => ({
-              duplicateObject: { objectId: originalSlideId }
-            }));
-            const dupBatchRes = await slides.presentations.batchUpdate({
-              presentationId: newPresId,
-              requestBody: { requests: duplicateRequests }
-            });
-            
-            // Ambil ID slide yang baru saja diduplikasi
-            const newSlideIds = dupBatchRes.data.replies.map(rep => rep.duplicateObject.objectId);
+              // C5. OPTIMASI: Isi data ke semua slide sekaligus (Super Fast!)
+              const populateRequests = [];
+              for (let idx = 0; idx < pesertaList.length; idx++) {
+                const slideId = newSlideIds[idx];
+                const currentPeserta = pesertaList[idx];
+                const currentDocNum = docNumbersArray[idx];
+                const qrUrlPage = `${verifyUrl}?halaman=${idx + 1}`;
+                const qrImageUrlPage = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrUrlPage)}&color=000000&bgcolor=FFFFFF&ecc=H`;
 
-            // C5. OPTIMASI: Isi data ke semua slide sekaligus (Super Fast!)
-            const populateRequests = [];
-            for (let idx = 0; idx < pesertaList.length; idx++) {
-              const slideId = newSlideIds[idx];
-              const currentPeserta = pesertaList[idx];
-              const currentDocNum = docNumbersArray[idx];
-              const qrUrlPage = `${verifyUrl}?halaman=${idx + 1}`;
-              const qrImageUrlPage = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrUrlPage)}&color=000000&bgcolor=FFFFFF&ecc=H`;
+                populateRequests.push(
+                  { replaceAllText: { containsText: { text: '{{NAMA_PESERTA}}', matchCase: true }, replaceText: currentPeserta, pageObjectIds: [slideId] } },
+                  { replaceAllText: { containsText: { text: '{{KEGIATAN}}', matchCase: true }, replaceText: namaKegiatan, pageObjectIds: [slideId] } },
+                  { replaceAllText: { containsText: { text: '{{TANGGAL}}', matchCase: true }, replaceText: tanggalKegiatan, pageObjectIds: [slideId] } },
+                  { replaceAllText: { containsText: { text: '{{NO_SURAT}}', matchCase: true }, replaceText: currentDocNum, pageObjectIds: [slideId] } },
+                  { replaceAllShapesWithImage: { containsText: { text: '{{QR_CODE}}', matchCase: true }, imageUrl: qrImageUrlPage, pageObjectIds: [slideId] } }
+                );
+              }
 
-              populateRequests.push(
-                { replaceAllText: { containsText: { text: '{{NAMA_PESERTA}}', matchCase: true }, replaceText: currentPeserta, pageObjectIds: [slideId] } },
-                { replaceAllText: { containsText: { text: '{{KEGIATAN}}', matchCase: true }, replaceText: namaKegiatan, pageObjectIds: [slideId] } },
-                { replaceAllText: { containsText: { text: '{{TANGGAL}}', matchCase: true }, replaceText: tanggalKegiatan, pageObjectIds: [slideId] } },
-                { replaceAllText: { containsText: { text: '{{NO_SURAT}}', matchCase: true }, replaceText: currentDocNum, pageObjectIds: [slideId] } },
-                { replaceAllShapesWithImage: { containsText: { text: '{{QR_CODE}}', matchCase: true }, imageUrl: qrImageUrlPage, pageObjectIds: [slideId] } }
-              );
+              await slides.presentations.batchUpdate({
+                presentationId: newPresId,
+                requestBody: { requests: populateRequests }
+              });
+
+              // C6. Hapus Slide Template Asli (Halaman 1 yang masih kosong)
+              await slides.presentations.batchUpdate({
+                presentationId: newPresId,
+                requestBody: { requests: [{ deleteObject: { objectId: originalSlideId } }] }
+              });
             }
-
-            await slides.presentations.batchUpdate({
-              presentationId: newPresId,
-              requestBody: { requests: populateRequests }
-            });
-
-            // C6. Hapus Slide Template Asli (Halaman 1 yang masih kosong)
-            await slides.presentations.batchUpdate({
-              presentationId: newPresId,
-              requestBody: { requests: [{ deleteObject: { objectId: originalSlideId } }] }
-            });
 
           } else if (docType === 'Sertifikat' && fileUrl.includes('drive.google.com')) {
             // ==========================================
