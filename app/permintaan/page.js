@@ -322,7 +322,7 @@ export default function PermintaanPage() {
           {showForm && (
             <div className="form-card mb-4">
               <div className="form-header"><h6><i className="bi bi-plus-circle me-2"></i>{editId ? 'Edit Permintaan' : 'Form Permintaan'}</h6><p>Isi form berikut untuk mengajukan permintaan tanda tangan</p></div>
-              <div className="form-body"><DynamicFormFields /><div className="mt-4 text-end"><button className="btn-primary-custom" onClick={submitForm}><i className="bi bi-send"></i>{editId ? 'Update' : 'Kirim Permintaan'}</button></div></div>
+              <div className="form-body">{dynamicFormFields}<div className="mt-4 text-end"><button className="btn-primary-custom" onClick={submitForm}><i className="bi bi-send"></i>{editId ? 'Update' : 'Kirim Permintaan'}</button></div></div>
             </div>
           )}
           <h6 style={{fontWeight:700,fontSize:16,marginBottom:16}}><i className="bi bi-clock-history me-2" style={{color:'var(--primary)'}}></i>Riwayat Permintaan</h6>
@@ -401,7 +401,7 @@ export default function PermintaanPage() {
           
           {showForm && user.role === 'admin' && (
             <div className="modal fade show d-block" tabIndex="-1"><div className="modal-dialog modal-lg"><div className="modal-content"><div className="modal-header"><h6 className="modal-title">{editId ? 'Edit Permintaan' : 'Tambah Permintaan'}</h6><button type="button" className="btn-close" onClick={() => setShowForm(false)}></button></div>
-              <div className="modal-body"><DynamicFormFields /></div>
+              <div className="modal-body">{dynamicFormFields}</div>
               <div className="modal-footer"><button className="btn-outline-custom" onClick={() => setShowForm(false)}>Batal</button><button className="btn-primary-custom" onClick={submitForm}><i className="bi bi-save"></i>Simpan</button></div>
             </div></div></div>
           )}
