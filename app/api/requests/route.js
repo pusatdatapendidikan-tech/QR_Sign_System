@@ -55,7 +55,14 @@ export async function POST(req) {
     const session = await getSession();
     if (!session.user) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     
-    const d = await req.json();
+        const d = await req.json();
+    
+    // TAMBAHKAN INI UNTUK DEBUG
+    console.log('DEBUG POST REQUEST:', { 
+      docType: d.documentType, 
+      namaKegiatan: d.namaKegiatan, 
+      daftarPeserta: d.daftarPeserta 
+    });
     const id = generateId();
     const docType = d.documentType || '-';
     const departemen = d.departemen || '';
