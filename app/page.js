@@ -133,7 +133,7 @@ export default function LoginPage() {
               <div className="mb-3"><input type="email" className="form-control" placeholder="Email" required value={regForm.email} onChange={e => setRegForm({...regForm, email: e.target.value})} /></div>
               <div className="mb-3">
                 <select className="form-select" required value={regForm.division} onChange={e => setRegForm({...regForm, division: e.target.value})}>
-                  <option value="">-- Pilih Divisi --</option>
+                  <option value="">-- Pilih Program --</option>
                   {divisi.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
