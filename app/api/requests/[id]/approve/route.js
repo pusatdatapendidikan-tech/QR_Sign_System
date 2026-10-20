@@ -216,40 +216,65 @@ export async function POST(req, { params }) {
               
               // 3. Ambil struktur dokumen untuk mencari posisi marker
               const docRes = await docs.documents.get({ documentId: docId });
-              let markerStart = -1, markerEnd = -1;
-              
-              for (const element of docRes.data.body.content) {
-                if (element.paragraph && element.paragraph.elements) {
-                  for (const el of element.paragraph.elements) {
-                    if (el.textRun && el.textRun.content.includes(markerText)) {
-                      markerStart = parseInt(el.startIndex);
-                      markerEnd = parseInt(el.endIndex);
-                      break;
+
+              // Fungsi recursive untuk mencari marker di mana pun lokasinya
+              // (termasuk di dalam sel tabel, tabel bersarang, dll)
+              function findMarkerInContent(content, markerText) {
+                if (!content) return null;
+                
+                for (const element of content) {
+                  // Cek jika ini adalah paragraf
+                  if (element.paragraph && element.paragraph.elements) {
+                    for (const el of element.paragraph.elements) {
+                      if (el.textRun && el.textRun.content.includes(markerText)) {
+                        return {
+                          start: parseInt(el.startIndex),
+                          end: parseInt(el.endIndex)
+                        };
+                      }
+                    }
+                  }
+                  // Cek jika ini adalah tabel (rekursif ke dalam sel)
+                  if (element.table && element.table.tableRows) {
+                    for (const row of element.table.tableRows) {
+                      for (const cell of row.tableCells) {
+                        const found = findMarkerInContent(cell.content, markerText);
+                        if (found) return found;
+                      }
                     }
                   }
                 }
-                if (markerStart > -1) break;
+                return null;
               }
-              
+
+              // Panggil fungsi pencarian
+              const marker = findMarkerInContent(docRes.data.body.content, markerText);
+              let markerStart = -1, markerEnd = -1;
+              if (marker) {
+                markerStart = marker.start;
+                markerEnd = marker.end;
+              }
+
+              console.log('Marker ditemukan di:', markerStart, '-', markerEnd);
+
+              // 4. Sisipkan gambar & hapus marker
               if (markerStart > -1 && markerEnd > -1) {
                 await docs.documents.batchUpdate({
                   documentId: docId,
                   requestBody: {
                     requests: [
-                      // 1. SISIPKAN GAMBAR DULU di awal marker
-                      // (Gambar mewarisi posisi & style paragraf marker)
+                      // 1. Sisipkan gambar dulu di awal marker
                       {
                         insertInlineImage: {
                           location: { index: markerStart },
                           objectSize: {
-                            height: { magnitude: 80, unit: 'PT' },  // Ukuran lebih kecil (sekitar 106px)
+                            height: { magnitude: 80, unit: 'PT' },
                             width: { magnitude: 80, unit: 'PT' }
                           },
                           uri: qrImageUrl
                         }
                       },
-                      // 2. HAPUS MARKER TEXT yang sekarang posisinya sudah bergeser +1
-                      // (karena image tadi mengisi 1 karakter di depannya)
+                      // 2. Hapus teks marker yang posisinya sudah bergeser +1
                       {
                         deleteContentRange: {
                           range: { 
