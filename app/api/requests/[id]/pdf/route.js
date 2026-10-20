@@ -76,7 +76,7 @@ export async function GET(req, { params }) {
           if (!docIdMatch) return NextResponse.json({ success: false, message: 'Format URL Docs tidak valid' }, { status: 400 });
 
           const auth = getAuth();
-          const drive = google.drive({ version: 'v1', auth }); // Docs API pakai v1 di export
+          const drive = google.drive({ version: 'v3', auth }); // Docs API pakai v1 di export
           
           const res = await drive.files.export({
             fileId: docIdMatch[1],
