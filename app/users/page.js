@@ -211,7 +211,7 @@ export default function UsersPage() {
                     </div>
                   )}
                   <div className="col-12"><label className="form-label">Email</label><input type="email" className="form-control" value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
-                  <div className="col-md-6"><label className="form-label">Divisi</label><select className="form-select" value={form.division} onChange={e => setForm({...form, division: e.target.value})}><option value="">-- Pilih --</option>{divisi.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
+                  <div className="col-md-6"><label className="form-label">Program</label><select className="form-select" value={form.division} onChange={e => setForm({...form, division: e.target.value})}><option value="">-- Pilih --</option>{divisi.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
                   <div className="col-md-6"><label className="form-label">Jabatan</label><select className="form-select" value={form.position} onChange={e => setForm({...form, position: e.target.value})}><option value="">-- Pilih --</option>{jabatan.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
                 </div>
               </div>

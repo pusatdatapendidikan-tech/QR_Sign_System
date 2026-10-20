@@ -77,7 +77,7 @@ export default function RegistrasiPage() {
           <table className="table table-custom">
             <thead>
               <tr>
-                <th>No</th><th>Tanggal Daftar</th><th>Nama</th><th>Username</th><th>Email</th><th>Divisi</th><th>Jabatan</th><th>Aksi</th>
+                <th>No</th><th>Tanggal Daftar</th><th>Nama</th><th>Username</th><th>Email</th><th>Program</th><th>Jabatan</th><th>Aksi</th>
               </tr>
             </thead>
             <tbody>
