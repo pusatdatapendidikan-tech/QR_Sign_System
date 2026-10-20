@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth, generateBatchDocNumbers } from '@/lib/googleSheets';
+import { sendEmail } from '@/lib/email';
 import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
 import { getWIBDate } from '@/lib/utils';
@@ -277,6 +278,55 @@ export async function POST(req, { params }) {
         }
 
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
+        // Kirim email notifikasi ke User (pemohon)
+        try {
+          // Baca email user dari sheet Users berdasarkan username
+          const requesterUsername = data[i][2]; // kolom requester_username
+          const usersData = await readSheet(CONFIG.SHEETS.USERS);
+          let userEmail = '';
+          for (let u = 1; u < usersData.length; u++) {
+            if (usersData[u][1] === requesterUsername) {
+              userEmail = usersData[u][5]; // kolom email
+              break;
+            }
+          }
+
+          if (userEmail) {
+            const html = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: #059669; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                  <h2 style="margin: 0;">✅ Permintaan Disetujui!</h2>
+                </div>
+                <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
+                  <p>Halo <strong>${data[i][1]}</strong>,</p>
+                  <p>Permintaan tanda tangan Anda telah <strong style="color: #059669;">DISETUJUI</strong> oleh ${approverName} (${data[i][9]}).</p>
+                  
+                  <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Nomor Surat</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${docNumber}</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Jenis Surat</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${docType}</td></tr>
+                    <tr><td style="padding: 8px;"><strong>Tanggal Disetujui</strong></td><td style="padding: 8px;">${getWIBDate()}</td></tr>
+                  </table>
+
+                  ${qrWarning ? `<div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin: 16px 0; color: #92400e;">${qrWarning.replace(/\\n/g, '<br/>')}</div>` : ''}
+
+                  <div style="text-align: center; margin-top: 24px;">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://qr-sign-systemgen.vercel.app'}/permintaan" 
+                      style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                      Lihat & Download Dokumen
+                    </a>
+                  </div>
+                </div>
+              </div>
+            `;
+            await sendEmail({ 
+              to: userEmail, 
+              subject: `Permintaan Disetujui: ${docType} - ${docNumber}`, 
+              html 
+            });
+          }
+        } catch (emailErr) {
+          console.error('Gagal kirim email ke user:', emailErr.message);
+        }
         return NextResponse.json({ success: true, message: `Permintaan berhasil disetujui dengan Nomor Surat: ${docNumber}${qrWarning}` });
       }
     }

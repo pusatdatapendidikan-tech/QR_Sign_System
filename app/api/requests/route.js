@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, appendRow, ensureDocTypeSheet, updateCell, clearSheetCache } from '@/lib/googleSheets';
+import { sendEmail } from '@/lib/email';
 import { CONFIG } from '@/lib/config';
 import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
@@ -98,6 +99,55 @@ export async function POST(req) {
     clearSheetCache(CONFIG.SHEETS.REQUESTS);
     clearSheetCache(CONFIG.SHEETS.NOMOR_SURAT);
     if (docType && docType !== '-') clearSheetCache(docType);
+    // Kirim email notifikasi ke Admin
+    try {
+      // Baca email admin dari sheet Users
+      const usersData = await readSheet(CONFIG.SHEETS.USERS);
+      let adminEmails = [];
+      for (let u = 1; u < usersData.length; u++) {
+        if (usersData[u][4] === 'admin' && usersData[u][5] && usersData[u][10] === 'active') {
+          adminEmails.push(usersData[u][5]);
+        }
+      }
+      // Fallback ke env variable kalau tidak ada admin di sheet
+      if (adminEmails.length === 0 && process.env.ADMIN_EMAIL) {
+        adminEmails.push(process.env.ADMIN_EMAIL);
+      }
+
+      if (adminEmails.length > 0) {
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1d4ed8; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+              <h2 style="margin: 0;">📋 Permintaan Baru Masuk</h2>
+            </div>
+            <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
+              <p>Halo Admin,</p>
+              <p>Ada permintaan tanda tangan baru yang menunggu review Anda:</p>
+              <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Pemohon</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${d.requesterName || '-'}</td></tr>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Program/Divisi</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${d.division || '-'}</td></tr>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Jenis Surat</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${docType}</td></tr>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><strong>Perihal</strong></td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${d.perihal || '-'}</td></tr>
+                <tr><td style="padding: 8px;"><strong>Tanggal Pengajuan</strong></td><td style="padding: 8px;">${getWIBDate()}</td></tr>
+              </table>
+              <div style="text-align: center; margin-top: 24px;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://qr-sign-systemgen.vercel.app'}/permintaan" 
+                  style="background: #1d4ed8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Lihat Detail Permintaan
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+        await sendEmail({ 
+          to: adminEmails.join(', '), 
+          subject: `Permintaan Baru: ${docType} - ${d.requesterName}`, 
+          html 
+        });
+      }
+    } catch (emailErr) {
+      console.error('Gagal kirim email ke admin:', emailErr.message);
+    }
     
     return NextResponse.json({ success: true, message: 'Permintaan berhasil dikirim', id, documentNumber: docNumber });
   } catch (e) {
