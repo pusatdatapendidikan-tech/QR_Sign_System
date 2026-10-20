@@ -30,10 +30,10 @@ export async function GET(req, { params }) {
     
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === params.id) {
-        const targetSigner = data[i][9];
-        let signerTitle = targetSigner;
-        const signerData = signers.find(s => s.jabatan === targetSigner);
-        if (signerData) signerTitle = signerData.nama;
+    const targetSigner = data[i][9]; // Ini jabatan signer, mis: "Ketua Yayasan Pendidikan umar Usman"
+
+    // signerTitle = jabatan (BUKAN nama signer)
+    const signerTitle = targetSigner;
         
         // ==========================================
         // LOGIKA KONVERSI NOMOR SURAT UNTUK BATCH SERTIFIKAT
