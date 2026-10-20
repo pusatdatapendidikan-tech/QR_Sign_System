@@ -174,128 +174,103 @@ export async function POST(req, { params }) {
             // ==========================================
             // (Kode PDF Stamping batch yang lama tetap di sini jika diperlukan)
             
-          } else if (fileUrl.includes('docs.google.com')) {
-            // ==========================================
-            // ALUR B: GOOGLE DOCS (SURAT BIASA)
-            // ==========================================
-            const docs = google.docs({ version: 'v1', auth });
-            const docId = getDriveFileId(fileUrl);
-            
-            // URL Verifikasi QR Code
-            const qrUrl = verifyUrl;
-            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
-            
-            try {
-              // 1. Ganti {{NO_SURAT}} dengan nomor surat yang sudah digenerate
-              await docs.documents.batchUpdate({
-                documentId: docId,
-                requestBody: {
-                  requests: [{
-                    replaceAllText: {
-                      containsText: { text: '{{NO_SURAT}}', matchCase: true },
-                      replaceText: docNumber
-                    }
-                  }]
-                }
-              });
-              console.log('Berhasil ganti {{NO_SURAT}} dengan:', docNumber);
+            } else if (fileUrl.includes('docs.google.com')) {
+              // ==========================================
+              // ALUR B: GOOGLE DOCS (SURAT BIASA)
+              // ==========================================
+              const docs = google.docs({ version: 'v1', auth });
+              const docId = getDriveFileId(fileUrl);
               
-              // 2. Ganti {{QR_CODE}} dengan marker unik (agar mudah dicari posisinya)
-              const markerText = `[[QR_PLACEHOLDER_${Date.now()}]]`;
-              await docs.documents.batchUpdate({
-                documentId: docId,
-                requestBody: {
-                  requests: [{
-                    replaceAllText: {
-                      containsText: { text: '{{QR_CODE}}', matchCase: true },
-                      replaceText: markerText
-                    }
-                  }]
-                }
-              });
+              const qrUrl = verifyUrl;
+              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
               
-              // 3. Ambil struktur dokumen untuk mencari posisi marker
-              const docRes = await docs.documents.get({ documentId: docId });
-
-              // Fungsi recursive untuk mencari marker di mana pun lokasinya
-              // (termasuk di dalam sel tabel, tabel bersarang, dll)
-              function findMarkerInContent(content, markerText) {
-                if (!content) return null;
+              try {
+                // 1. Ambil struktur dokumen SEBELUM modifikasi apapun
+                const docRes = await docs.documents.get({ documentId: docId });
                 
-                for (const element of content) {
-                  // Cek jika ini adalah paragraf
-                  if (element.paragraph && element.paragraph.elements) {
-                    for (const el of element.paragraph.elements) {
-                      if (el.textRun && el.textRun.content.includes(markerText)) {
-                        return {
-                          start: parseInt(el.startIndex),
-                          end: parseInt(el.endIndex)
-                        };
+                // 2. Fungsi recursive untuk cari teks di paragraf DAN di dalam sel tabel
+                function findTextInContent(content, searchText) {
+                  if (!content) return null;
+                  
+                  for (const element of content) {
+                    // Cek di paragraf
+                    if (element.paragraph && element.paragraph.elements) {
+                      for (const el of element.paragraph.elements) {
+                        if (el.textRun && el.textRun.content.includes(searchText)) {
+                          const offset = el.textRun.content.indexOf(searchText);
+                          return {
+                            start: parseInt(el.startIndex) + offset,
+                            end: parseInt(el.startIndex) + offset + searchText.length
+                          };
+                        }
+                      }
+                    }
+                    // Cek di dalam tabel (recursive ke sel-selnya)
+                    if (element.table && element.table.tableRows) {
+                      for (const row of element.table.tableRows) {
+                        for (const cell of row.tableCells) {
+                          const found = findTextInContent(cell.content, searchText);
+                          if (found) return found;
+                        }
                       }
                     }
                   }
-                  // Cek jika ini adalah tabel (rekursif ke dalam sel)
-                  if (element.table && element.table.tableRows) {
-                    for (const row of element.table.tableRows) {
-                      for (const cell of row.tableCells) {
-                        const found = findMarkerInContent(cell.content, markerText);
-                        if (found) return found;
-                      }
-                    }
-                  }
+                  return null;
                 }
-                return null;
-              }
-
-              // Panggil fungsi pencarian
-              const marker = findMarkerInContent(docRes.data.body.content, markerText);
-              let markerStart = -1, markerEnd = -1;
-              if (marker) {
-                markerStart = marker.start;
-                markerEnd = marker.end;
-              }
-
-              console.log('Marker ditemukan di:', markerStart, '-', markerEnd);
-
-              // 4. Sisipkan gambar & hapus marker
-              if (markerStart > -1 && markerEnd > -1) {
-                await docs.documents.batchUpdate({
-                  documentId: docId,
-                  requestBody: {
-                    requests: [
-                      // 1. Sisipkan gambar dulu di awal marker
-                      {
-                        insertInlineImage: {
-                          location: { index: markerStart },
-                          objectSize: {
-                            height: { magnitude: 80, unit: 'PT' },
-                            width: { magnitude: 80, unit: 'PT' }
-                          },
-                          uri: qrImageUrl
-                        }
+                
+                // 3. Cari posisi {{QR_CODE}} di dokumen
+                const qrCodeLocation = findTextInContent(docRes.data.body.content, '{{QR_CODE}}');
+                console.log('Lokasi {{QR_CODE}}:', qrCodeLocation);
+                
+                // 4. Susun semua request dalam 1 batch
+                const requests = [];
+                
+                if (qrCodeLocation) {
+                  // a. Sisipkan gambar QR di awal teks {{QR_CODE}}
+                  requests.push({
+                    insertInlineImage: {
+                      location: { index: qrCodeLocation.start },
+                      objectSize: {
+                        height: { magnitude: 80, unit: 'PT' },
+                        width: { magnitude: 80, unit: 'PT' }
                       },
-                      // 2. Hapus teks marker yang posisinya sudah bergeser +1
-                      {
-                        deleteContentRange: {
-                          range: { 
-                            startIndex: markerStart + 1, 
-                            endIndex: markerEnd + 1 
-                          }
-                        }
+                      uri: qrImageUrl
+                    }
+                  });
+                  // b. Hapus teks {{QR_CODE}} (sudah bergeser +1 karena gambar)
+                  requests.push({
+                    deleteContentRange: {
+                      range: { 
+                        startIndex: qrCodeLocation.start + 1, 
+                        endIndex: qrCodeLocation.end + 1 
                       }
-                    ]
+                    }
+                  });
+                } else {
+                  console.warn('{{QR_CODE}} tidak ditemukan!');
+                  qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen, jadi QR Code tidak bisa disisipkan.';
+                }
+                
+                // c. Replace {{NO_SURAT}} dengan nomor surat
+                requests.push({
+                  replaceAllText: {
+                    containsText: { text: '{{NO_SURAT}}', matchCase: true },
+                    replaceText: docNumber
                   }
                 });
-                console.log('Berhasil sisipkan QR Code di posisi marker.');
-              } else {
-                console.warn('Marker QR_CODE tidak ditemukan di dokumen!');
-                qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen, jadi QR Code tidak bisa disisipkan.';
+                
+                // 5. Eksekusi semua request dalam 1 batch
+                await docs.documents.batchUpdate({
+                  documentId: docId,
+                  requestBody: { requests }
+                });
+                console.log('Berhasil update dokumen Google Docs.');
+                
+              } catch (docsErr) {
+                console.error('Gagal update Google Docs:', docsErr.message);
+                qrWarning = '\\n\\n⚠️ Peringatan: Gagal update dokumen Google Docs. ' + docsErr.message;
               }
-            } catch (docsErr) {
-              console.error('Gagal update Google Docs:', docsErr.message);
-              qrWarning = '\\n\\n⚠️ Peringatan: Gagal update dokumen Google Docs. ' + docsErr.message;
             }
-          }
         } catch (docError) {
           console.error('Gagal proses dokumen:', docError.message);
           qrWarning = '\\n\\n⚠️ Peringatan: Gagal memproses dokumen otomatis. ' + docError.message;
