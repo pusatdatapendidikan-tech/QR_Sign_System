@@ -32,6 +32,7 @@ export async function GET(req) {
         rejectionReason: row[17] || '-', createdAt: formatDate(row[18]),
         forwardedBy: row[19] || '-', forwardedAt: row[20] ? formatDate(row[20]) : '-',
         readByRequester: row[21] === true || row[21] === 'true',
+        tanggalSurat: row[27] || '-', // <--- TAMBAHKAN INI
       };
       
       let include = false;
@@ -78,7 +79,8 @@ export async function POST(req) {
       d.requestType, docType, docNumber, d.perihal || '-',
       d.targetSigner || '-', d.fileUrl || '-', d.fileName || '-',
       'Menunggu', '-', '-', '-', '-', '-', getWIBDate(), '-', '-', false, departemen || '-', d.posisiTTD || 'Kanan Bawah', 
-      d.namaKegiatan || '-', d.tanggalKegiatan || '-', d.daftarPeserta || '-' // <--- TAMBAHKAN INI
+      d.namaKegiatan || '-', d.tanggalKegiatan || '-', d.daftarPeserta || '-',
+      d.tanggalSurat || '-' // <--- TAMBAHKAN INI
     ]);
     
     if (docType && docType !== '-') {

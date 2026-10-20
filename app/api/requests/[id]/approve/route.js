@@ -178,7 +178,94 @@ export async function POST(req, { params }) {
             // ==========================================
             // ALUR B: GOOGLE DOCS (SURAT BIASA)
             // ==========================================
-            // (Kode Google Docs replaceAllText lama tetap di sini)
+            const docs = google.docs({ version: 'v1', auth });
+            const docId = getDriveFileId(fileUrl);
+            
+            // URL Verifikasi QR Code
+            const qrUrl = verifyUrl;
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
+            
+            try {
+              // 1. Ganti {{NO_SURAT}} dengan nomor surat yang sudah digenerate
+              await docs.documents.batchUpdate({
+                documentId: docId,
+                requestBody: {
+                  requests: [{
+                    replaceAllText: {
+                      containsText: { text: '{{NO_SURAT}}', matchCase: true },
+                      replaceText: docNumber
+                    }
+                  }]
+                }
+              });
+              console.log('Berhasil ganti {{NO_SURAT}} dengan:', docNumber);
+              
+              // 2. Ganti {{QR_CODE}} dengan marker unik (agar mudah dicari posisinya)
+              const markerText = `[[QR_PLACEHOLDER_${Date.now()}]]`;
+              await docs.documents.batchUpdate({
+                documentId: docId,
+                requestBody: {
+                  requests: [{
+                    replaceAllText: {
+                      containsText: { text: '{{QR_CODE}}', matchCase: true },
+                      replaceText: markerText
+                    }
+                  }]
+                }
+              });
+              
+              // 3. Ambil struktur dokumen untuk mencari posisi marker
+              const docRes = await docs.documents.get({ documentId: docId });
+              let markerStart = -1, markerEnd = -1;
+              
+              for (const element of docRes.data.body.content) {
+                if (element.paragraph && element.paragraph.elements) {
+                  for (const el of element.paragraph.elements) {
+                    if (el.textRun && el.textRun.content.includes(markerText)) {
+                      markerStart = parseInt(el.startIndex);
+                      markerEnd = parseInt(el.endIndex);
+                      break;
+                    }
+                  }
+                }
+                if (markerStart > -1) break;
+              }
+              
+              // 4. Hapus marker, lalu sisipkan gambar QR Code di posisi marker
+              if (markerStart > -1 && markerEnd > -1) {
+                await docs.documents.batchUpdate({
+                  documentId: docId,
+                  requestBody: {
+                    requests: [
+                      // Hapus teks marker terlebih dahulu
+                      {
+                        deleteContentRange: {
+                          range: { startIndex: markerStart, endIndex: markerEnd }
+                        }
+                      },
+                      // Sisipkan gambar QR Code di posisi yang sama
+                      {
+                        insertInlineImage: {
+                          location: { index: markerStart },
+                          objectSize: {
+                            height: { magnitude: 120, unit: 'PT' },
+                            width: { magnitude: 120, unit: 'PT' }
+                          },
+                          uri: qrImageUrl
+                        }
+                      }
+                    ]
+                  }
+                });
+                console.log('Berhasil sisipkan QR Code di dokumen.');
+              } else {
+                console.warn('Marker QR_CODE tidak ditemukan di dokumen. Pastikan template ada teks {{QR_CODE}}.');
+                qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen, jadi QR Code tidak bisa disisipkan.';
+              }
+            } catch (docsErr) {
+              console.error('Gagal update Google Docs:', docsErr.message);
+              qrWarning = '\\n\\n⚠️ Peringatan: Gagal update dokumen Google Docs. ' + docsErr.message;
+            }
           }
         } catch (docError) {
           console.error('Gagal proses dokumen:', docError.message);

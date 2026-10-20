@@ -39,21 +39,22 @@ function PermintaanForm({ form, setForm, user, divisi, jabatan, jenisSurat, sign
                 <small className="text-muted">Sistem akan otomatis membuat 1 halaman sertifikat per nama. Data & Logo bisa diedit di Google Slides nanti.</small>
               </div>
             </>
-          ) : (
-            <>
-              <div className="col-12"><label className="form-label">Perihal</label><input type="text" className="form-control" value={form.perihal} onChange={e => setForm({...form, perihal: e.target.value})} placeholder="Tulis perihal surat..." /></div>
-              <div className="col-12">
-                <label className="form-label">Link Google Docs (Template Surat)</label>
-                <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
-                  <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight:600}}><i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!</p>
-                  <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>1. Klik <strong>Share</strong> di Google Docs.<br/>2. Ubah akses menjadi <strong>Anyone with the link = Editor</strong>.</p>
-                  <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
-                  <p style={{fontSize:12,color:'#0369a1',margin:0}}><i className="bi bi-info-circle me-1"></i>Pastikan ada penanda <strong>{'{'}{'}QR_CODE{'}{'}'}</strong> dan <strong>{'{'}{'}NO_SURAT{'}{'}'}</strong>.</p>
-                </div>
-                <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
-              </div>
-            </>
-          )}
+              ) : (
+                <>
+                  <div className="col-md-6"><label className="form-label">Tanggal Surat</label><input type="date" className="form-control" value={form.tanggalSurat} onChange={e => setForm({...form, tanggalSurat: e.target.value})} /></div>
+                  <div className="col-md-6"><label className="form-label">Perihal</label><input type="text" className="form-control" value={form.perihal} onChange={e => setForm({...form, perihal: e.target.value})} placeholder="Tulis perihal surat..." /></div>
+                  <div className="col-12">
+                    <label className="form-label">Link Google Docs (Template Surat)</label>
+                    <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:8,padding:'12px 16px',marginBottom:8}}>
+                      <p style={{fontSize:12,color:'#92400e',margin:'0 0 8px 0',lineHeight:1.6, fontWeight:600}}><i className="bi bi-exclamation-triangle-fill me-1"></i>WAJIB ATUR AKSES DOKUMEN!</p>
+                      <p style={{fontSize:12,color:'#92400e',margin:0,lineHeight:1.6}}>1. Klik <strong>Share</strong> di Google Docs.<br/>2. Ubah akses menjadi <strong>Anyone with the link = Editor</strong>.</p>
+                      <hr style={{borderColor:'#fde68a', margin:'8px 0'}}/>
+                      <p style={{fontSize:12,color:'#0369a1',margin:0}}><i className="bi bi-info-circle me-1"></i>Pastikan ada penanda <strong>{'{'}{'}QR_CODE{'}{'}'}</strong> dan <strong>{'{'}{'}NO_SURAT{'}{'}'}</strong>.</p>
+                    </div>
+                    <input type="url" className="form-control" value={form.docLink} onChange={e => setForm({...form, docLink: e.target.value})} placeholder="https://docs.google.com/document/d/..." />
+                  </div>
+                </>
+              )}
         </div>
       </div>
       <div className="mt-3 pt-3" style={{borderTop:'1px solid var(--border-color)'}}>
@@ -86,7 +87,8 @@ export default function PermintaanPage() {
   const [editId, setEditId] = useState('');
   const [form, setForm] = useState({ 
     nama:'', divisi:'', jabatan:'', jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'', 
-    posisiTTD: 'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:''
+    posisiTTD: 'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'',
+    tanggalSurat: ''
   });
 
   useEffect(() => {
@@ -160,7 +162,8 @@ export default function PermintaanPage() {
         requestType: 'Tanda Tangan', documentType: form.jenisSurat, departemen: form.departemen || '', perihal: form.perihal || '-', targetSigner: form.tujuanTtd,
         fileUrl: form.jenisSurat === 'Sertifikat' ? 'AUTO_GENERATED' : form.docLink,
         fileName: form.jenisSurat === 'Sertifikat' ? 'Sertifikat Batch' : 'Google Docs Template',
-        namaKegiatan: form.namaKegiatan || '-', tanggalKegiatan: form.tanggalKegiatan || '-', daftarPeserta: form.daftarPeserta || '-', posisiTTD: form.posisiTTD || 'Kanan Bawah'
+        namaKegiatan: form.namaKegiatan || '-', tanggalKegiatan: form.tanggalKegiatan || '-', daftarPeserta: form.daftarPeserta || '-', posisiTTD: form.posisiTTD || 'Kanan Bawah',
+        tanggalSurat: form.tanggalSurat || '-' // <--- TAMBAHKAN INI
       };
       
       let res;
@@ -237,13 +240,13 @@ export default function PermintaanPage() {
 
   const openEdit = (req) => {
     setEditId(req.id);
-    setForm({ nama: req.requesterName, divisi: req.division === '-' ? '' : req.division, jabatan: req.position === '-' ? '' : req.position, jenisSurat: req.documentType === '-' ? '' : req.documentType, perihal: req.perihal === '-' ? '' : req.perihal, tujuanTtd: req.targetSigner === '-' ? '' : req.targetSigner, namaSigner: signers.find(s => s.jabatan === req.targetSigner)?.nama || '', docLink: req.fileUrl !== '-' ? req.fileUrl : '', departemen:'', posisiTTD: 'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'' });
+    setForm({ nama: req.requesterName, divisi: req.division === '-' ? '' : req.division, jabatan: req.position === '-' ? '' : req.position, jenisSurat: req.documentType === '-' ? '' : req.documentType,tanggalSurat: req.tanggalSurat && req.tanggalSurat !== '-' ? req.tanggalSurat : '', perihal: req.perihal === '-' ? '' : req.perihal, tujuanTtd: req.targetSigner === '-' ? '' : req.targetSigner, namaSigner: signers.find(s => s.jabatan === req.targetSigner)?.nama || '', docLink: req.fileUrl !== '-' ? req.fileUrl : '', departemen:'', posisiTTD: 'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'' });
     setShowForm(true);
   };
 
   const openAdd = () => {
     setEditId('');
-    setForm({ nama:'', divisi:user.division === '-' ? '' : user.division, jabatan:user.position === '-' ? '' : user.position, jenisSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'', posisiTTD:'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'' });
+    setForm({ nama:'', divisi:user.division === '-' ? '' : user.division, jabatan:user.position === '-' ? '' : user.position, jenisSurat:'', tanggalSurat:'', perihal:'', tujuanTtd:'', namaSigner:'', docLink:'', departemen:'', posisiTTD:'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'' });
     setShowForm(true);
   };
 
