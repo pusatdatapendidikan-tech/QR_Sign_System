@@ -231,35 +231,39 @@ export async function POST(req, { params }) {
                 if (markerStart > -1) break;
               }
               
-              // 4. Hapus marker, lalu sisipkan gambar QR Code di posisi marker
               if (markerStart > -1 && markerEnd > -1) {
                 await docs.documents.batchUpdate({
                   documentId: docId,
                   requestBody: {
                     requests: [
-                      // Hapus teks marker terlebih dahulu
-                      {
-                        deleteContentRange: {
-                          range: { startIndex: markerStart, endIndex: markerEnd }
-                        }
-                      },
-                      // Sisipkan gambar QR Code di posisi yang sama
+                      // 1. SISIPKAN GAMBAR DULU di awal marker
+                      // (Gambar mewarisi posisi & style paragraf marker)
                       {
                         insertInlineImage: {
                           location: { index: markerStart },
                           objectSize: {
-                            height: { magnitude: 120, unit: 'PT' },
-                            width: { magnitude: 120, unit: 'PT' }
+                            height: { magnitude: 80, unit: 'PT' },  // Ukuran lebih kecil (sekitar 106px)
+                            width: { magnitude: 80, unit: 'PT' }
                           },
                           uri: qrImageUrl
+                        }
+                      },
+                      // 2. HAPUS MARKER TEXT yang sekarang posisinya sudah bergeser +1
+                      // (karena image tadi mengisi 1 karakter di depannya)
+                      {
+                        deleteContentRange: {
+                          range: { 
+                            startIndex: markerStart + 1, 
+                            endIndex: markerEnd + 1 
+                          }
                         }
                       }
                     ]
                   }
                 });
-                console.log('Berhasil sisipkan QR Code di dokumen.');
+                console.log('Berhasil sisipkan QR Code di posisi marker.');
               } else {
-                console.warn('Marker QR_CODE tidak ditemukan di dokumen. Pastikan template ada teks {{QR_CODE}}.');
+                console.warn('Marker QR_CODE tidak ditemukan di dokumen!');
                 qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen, jadi QR Code tidak bisa disisipkan.';
               }
             } catch (docsErr) {
