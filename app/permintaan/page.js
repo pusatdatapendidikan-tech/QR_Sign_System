@@ -13,7 +13,7 @@ function PermintaanForm({ form, setForm, user, divisi, jabatan, jenisSurat, sign
     <>
       <div className="row g-3">
         <div className="col-md-4"><label className="form-label">Nama Pemohon</label><input type="text" className="form-control" value={form.nama || user.name} onChange={e => setForm({...form, nama: e.target.value})} /></div>
-        <div className="col-md-4"><label className="form-label">Divisi</label><select className="form-select" value={form.divisi} onChange={e => setForm({...form, divisi: e.target.value})}><option value="">-- Pilih --</option>{divisi.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
+        <div className="col-md-4"><label className="form-label">Program</label><select className="form-select" value={form.divisi} onChange={e => setForm({...form, divisi: e.target.value})}><option value="">-- Pilih --</option>{divisi.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
         <div className="col-md-4"><label className="form-label">Jabatan</label><select className="form-select" value={form.jabatan} onChange={e => setForm({...form, jabatan: e.target.value})}><option value="">-- Pilih --</option>{jabatan.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
       </div>
       <div className="mt-3 pt-3" style={{borderTop:'1px solid var(--border-color)'}}>
@@ -254,7 +254,7 @@ export default function PermintaanPage() {
 
   const exportExcel = () => {
     if (filtered.length === 0) { Swal.fire({icon:'info', title:'Info', text:'Tidak ada data untuk diexport', confirmButtonColor:'#1d4ed8'}); return; }
-    const ws_data = [['No', 'Pemohon', 'Divisi', 'Jabatan', 'Jenis Permintaan', 'Jenis Surat', 'Nomor Surat', 'Perihal', 'Tujuan TTD', 'Status', 'Tanggal Pengajuan', 'Diteruskan Oleh', 'Disetujui/Ditolak Oleh', 'Alasan']];
+    const ws_data = [['No', 'Pemohon', 'Program', 'Jabatan', 'Jenis Permintaan', 'Jenis Surat', 'Nomor Surat', 'Perihal', 'Tujuan TTD', 'Status', 'Tanggal Pengajuan', 'Diteruskan Oleh', 'Disetujui/Ditolak Oleh', 'Alasan']];
     filtered.forEach((r, i) => { ws_data.push([i + 1, r.requesterName, r.division, r.position, r.requestType, r.documentType, r.documentNumber, r.perihal || '-', r.targetSigner, r.status, r.createdAt, r.forwardedBy, (r.approvedBy || r.rejectedBy || '-'), r.rejectionReason || '-']); });
     const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(ws_data);
     ws['!cols'] = [{wch: 4}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 18}, {wch: 22}, {wch: 25}, {wch: 30}, {wch: 22}, {wch: 12}, {wch: 25}, {wch: 20}, {wch: 25}, {wch: 30}];
@@ -297,6 +297,7 @@ export default function PermintaanPage() {
                 <div className="hc-top"><div className="hc-title">{r.requestType}</div>{statusBadge(r.status)}</div>
                 <div className="hc-meta">
                   {r.documentType !== '-' && <div className="hc-meta-item"><span>Jenis Surat: </span><strong>{r.documentType}</strong></div>}
+                  {r.division && r.division !== '-' && <div className="hc-meta-item"><span>Program: </span><strong>{r.division}</strong></div>}
                   {r.documentNumber !== '-' && <div className="hc-meta-item"><span>No. Surat: </span><strong>{r.documentNumber}</strong></div>}
                   {r.perihal && r.perihal !== '-' && <div className="hc-meta-item"><span>Perihal: </span><strong>{r.perihal}</strong></div>}
                   {r.targetSigner !== '-' && <div className="hc-meta-item"><span>Tujuan TTD: </span><strong>{r.targetSigner}</strong></div>}
@@ -334,7 +335,7 @@ export default function PermintaanPage() {
               </div>
             </div>
             <div className="table-responsive">
-              <table className="table table-custom"><thead><tr><th>No</th><th>Pemohon</th><th>Divisi</th><th>Jenis</th><th>Jenis Surat</th><th>No. Surat</th><th>Perihal</th><th>Tujuan TTD</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
+              <table className="table table-custom"><thead><tr><th>No</th><th>Pemohon</th><th>Program</th><th>Jenis</th><th>Jenis Surat</th><th>No. Surat</th><th>Perihal</th><th>Tujuan TTD</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr></thead>
                 <tbody>
                   {pageData.length === 0 ? (<tr><td colSpan="11" className="text-center py-4" style={{color:'var(--text-muted)'}}><i className="bi bi-inbox me-2"></i>Tidak ada data</td></tr>) : pageData.map((r, i) => (
                     <tr key={r.id}>
