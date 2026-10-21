@@ -75,7 +75,7 @@ export default function PermintaanPage() {
   const [requests, setRequests] = useState([]);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 8;
+  const [pageSize, setPageSize] = useState(10); // Default 10, bisa diubah via dropdown
   
   const [divisi, setDivisi] = useState([]);
   const [jabatan, setJabatan] = useState([]);
@@ -268,7 +268,7 @@ export default function PermintaanPage() {
     const q = search.toLowerCase();
     return r.requesterName.toLowerCase().includes(q) || r.division.toLowerCase().includes(q) || r.requestType.toLowerCase().includes(q) || r.status.toLowerCase().includes(q) || (r.documentNumber || '-').toLowerCase().includes(q);
   });
-  const totalPages = Math.ceil(filtered.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageData = filtered.slice((page-1)*pageSize, page*pageSize);
 
   if (!user) return <div className="spinner-wrap"><div className="spinner-box"><div className="spinner"></div><p>Memuat sesi...</p></div></div>;
@@ -334,7 +334,30 @@ export default function PermintaanPage() {
               <h6><i className="bi bi-list me-2" style={{color:'var(--primary)'}}></i>{user.role === 'atasan' ? 'Permintaan Masuk' : 'Data Permintaan'}</h6>
               <div className="table-tools">
                 <div className="search-box"><i className="bi bi-search"></i><input type="text" placeholder="Cari..." value={search} onChange={e => {setSearch(e.target.value); setPage(1);}} /></div>
-                {user.role === 'admin' && (<><button className="btn-primary-custom" onClick={exportExcel} style={{background:'linear-gradient(135deg, #059669, #10b981)'}}><i className="bi bi-file-earmark-excel"></i>Export</button><button className="btn-primary-custom" onClick={openAdd}><i className="bi bi-plus"></i>Tambah</button></>)}
+                
+                {/* Dropdown untuk pilih jumlah data per halaman */}
+                <select 
+                  className="form-select" 
+                  value={pageSize} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setPageSize(val === 'all' ? 999999 : parseInt(val));
+                    setPage(1); // Reset ke halaman 1
+                  }}
+                  style={{ width: 'auto', maxWidth: '150px' }}
+                  title="Jumlah data per halaman"
+                >
+                  <option value="10">10 data</option>
+                  <option value="30">30 data</option>
+                  <option value="50">50 data</option>
+                  <option value="100">100 data</option>
+                  <option value="all">Semua Data</option>
+                </select>
+                
+                {user.role === 'admin' && (<>
+                  <button className="btn-primary-custom" onClick={exportExcel} style={{background:'linear-gradient(135deg, #059669, #10b981)'}}><i className="bi bi-file-earmark-excel"></i>Export</button>
+                  <button className="btn-primary-custom" onClick={openAdd}><i className="bi bi-plus"></i>Tambah</button>
+                </>)}
               </div>
             </div>
             <div className="table-responsive">
@@ -363,8 +386,28 @@ export default function PermintaanPage() {
               </table>
             </div>
             <div className="table-footer">
-              <div className="showing-text">Menampilkan {filtered.length === 0 ? 0 : (page-1)*pageSize+1}-{Math.min(page*pageSize, filtered.length)} dari {filtered.length} data</div>
-              {totalPages > 1 && (<div className="pagination-custom"><button className="page-btn" disabled={page===1} onClick={() => setPage(page-1)}><i className="bi bi-chevron-left"></i></button>{Array.from({length: totalPages}, (_, i) => i+1).slice(Math.max(0, page-3), Math.max(0, page-3)+5).map(p => (<button key={p} className={`page-btn ${p===page?'active':''}`} onClick={() => setPage(p)}>{p}</button>))}<button className="page-btn" disabled={page===totalPages} onClick={() => setPage(page+1)}><i className="bi bi-chevron-right"></i></button></div>)}
+              <div className="showing-text">
+                Menampilkan {filtered.length === 0 ? 0 : (page-1)*pageSize+1}-{Math.min(page*pageSize, filtered.length)} dari {filtered.length} data
+                {pageSize === 999999 && filtered.length > 0 ? ' (Semua)' : ''}
+              </div>
+              {totalPages > 1 && (
+                <div className="pagination-custom">
+                  <button className="page-btn" disabled={page===1} onClick={() => setPage(page-1)}>
+                    <i className="bi bi-chevron-left"></i>
+                  </button>
+                  {Array.from({length: totalPages}, (_, i) => i+1)
+                    .slice(Math.max(0, page-3), Math.max(0, page-3)+5)
+                    .map(p => (
+                      <button key={p} className={`page-btn ${p===page?'active':''}`} onClick={() => setPage(p)}>
+                        {p}
+                      </button>
+                    ))
+                  }
+                  <button className="page-btn" disabled={page===totalPages} onClick={() => setPage(page+1)}>
+                    <i className="bi bi-chevron-right"></i>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
