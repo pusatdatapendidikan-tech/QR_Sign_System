@@ -225,6 +225,97 @@ export default function PermintaanPage() {
       });
   };
 
+  const doRevise = async (id) => {
+  Swal.fire({
+    title: 'Tandai untuk Revisi?',
+    text: 'User akan dapat mengedit dan mengirim ulang permintaan ini',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Tandai Revisi',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#f59e0b',
+    input: 'textarea',
+    inputLabel: 'Catatan revisi (opsional)',
+    inputPlaceholder: 'Tulis apa yang perlu direvisi oleh user...',
+  }).then(async r => {
+    if (r.isConfirmed) {
+      Swal.fire({ title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      const res = await fetch(`/api/requests/${id}/revise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ revisionNote: r.value || '-' })
+      }).then(r => r.json());
+      Swal.close();
+      if (res.success) {
+        Swal.fire({ icon: 'success', title: 'Ditandai Revisi', text: res.message, timer: 1500, showConfirmButton: false });
+        loadRequests(user);
+        window.dispatchEvent(new Event('badge-update'));
+      } else {
+        Swal.fire({ icon: 'error', title: 'Gagal', text: res.message, confirmButtonColor: '#1d4ed8' });
+      }
+    }
+  });
+};
+
+const doSubmitRevision = async () => {
+  if (!form.jenisSurat) { Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih jenis surat', confirmButtonColor: '#1d4ed8' }); return; }
+  if (!form.tujuanTtd) { Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih tujuan tanda tangan', confirmButtonColor: '#1d4ed8' }); return; }
+  
+  if (form.jenisSurat === 'Sertifikat') {
+    if (!form.namaKegiatan || !form.daftarPeserta) {
+      Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Nama Kegiatan dan Daftar Peserta wajib diisi', confirmButtonColor: '#1d4ed8' }); return;
+    }
+  } else {
+    if (!form.docLink || form.docLink.indexOf('docs.google.com') === -1) {
+      Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Masukkan link Google Docs yang valid', confirmButtonColor: '#1d4ed8' }); return;
+    }
+  }
+
+  Swal.fire({ title: 'Mengirim Revisi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  
+  try {
+    const payload = {
+      requesterName: form.nama || user.name,
+      requesterUsername: user.username,
+      division: form.divisi || user.division,
+      position: form.jabatan || user.position,
+      requestType: 'Tanda Tangan',
+      documentType: form.jenisSurat,
+      departemen: form.departemen || '',
+      perihal: form.perihal || '-',
+      targetSigner: form.tujuanTtd,
+      fileUrl: form.jenisSurat === 'Sertifikat' ? 'AUTO_GENERATED' : form.docLink,
+      fileName: form.jenisSurat === 'Sertifikat' ? 'Sertifikat Batch' : 'Google Docs Template',
+      namaKegiatan: form.namaKegiatan || '-',
+      tanggalKegiatan: form.tanggalKegiatan || '-',
+      daftarPeserta: form.daftarPeserta || '-',
+      posisiTTD: form.posisiTTD || 'Kanan Bawah',
+      tanggalSurat: form.tanggalSurat || '-'
+    };
+    
+    const res = await fetch(`/api/requests/${editId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(r => r.json());
+    
+    Swal.close();
+    if (res.success) {
+      Swal.fire({ icon: 'success', title: 'Revisi Terkirim', text: res.message, timer: 2000, showConfirmButton: false });
+      setShowForm(false);
+      setEditId('');
+      setForm({ nama: '', divisi: '', jabatan: '', jenisSurat: '', perihal: '', tujuanTtd: '', namaSigner: '', docLink: '', departemen: '', posisiTTD: 'Kanan Bawah', namaKegiatan: '', tanggalKegiatan: '', daftarPeserta: '', tanggalSurat: '' });
+      loadRequests(user);
+      window.dispatchEvent(new Event('badge-update'));
+    } else {
+      Swal.fire({ icon: 'error', title: 'Gagal', text: res.message, confirmButtonColor: '#1d4ed8' });
+    }
+  } catch (e) {
+    Swal.close();
+    Swal.fire({ icon: 'error', title: 'Error', text: String(e), confirmButtonColor: '#1d4ed8' });
+  }
+};
+
   const doDelete = async (id) => {
     Swal.fire({ title:'Hapus Data?', text:'Tidak dapat dikembalikan', icon:'warning', showCancelButton:true, confirmButtonText:'Ya, Hapus', cancelButtonText:'Batal', confirmButtonColor:'#dc2626' })
       .then(async r => {
@@ -238,10 +329,33 @@ export default function PermintaanPage() {
       });
   };
 
-  const openEdit = (req) => {
+  const openEdit = (req, isRevision = false) => {
     setEditId(req.id);
-    setForm({ nama: req.requesterName, divisi: req.division === '-' ? '' : req.division, jabatan: req.position === '-' ? '' : req.position, jenisSurat: req.documentType === '-' ? '' : req.documentType,tanggalSurat: req.tanggalSurat && req.tanggalSurat !== '-' ? req.tanggalSurat : '', perihal: req.perihal === '-' ? '' : req.perihal, tujuanTtd: req.targetSigner === '-' ? '' : req.targetSigner, namaSigner: signers.find(s => s.jabatan === req.targetSigner)?.nama || '', docLink: req.fileUrl !== '-' ? req.fileUrl : '', departemen:'', posisiTTD: 'Kanan Bawah', namaKegiatan:'', tanggalKegiatan:'', daftarPeserta:'' });
+    setForm({
+      nama: req.requesterName,
+      divisi: req.division === '-' ? '' : req.division,
+      jabatan: req.position === '-' ? '' : req.position,
+      jenisSurat: req.documentType === '-' ? '' : req.documentType,
+      perihal: req.perihal === '-' ? '' : req.perihal,
+      tujuanTtd: req.targetSigner === '-' ? '' : req.targetSigner,
+      namaSigner: signers.find(s => s.jabatan === req.targetSigner)?.nama || '',
+      docLink: req.fileUrl !== '-' && req.fileUrl !== 'AUTO_GENERATED' ? req.fileUrl : '',
+      departemen: '',
+      posisiTTD: 'Kanan Bawah',
+      namaKegiatan: req.namaKegiatan || '',
+      tanggalKegiatan: req.tanggalKegiatan || '',
+      daftarPeserta: req.daftarPeserta || '',
+      tanggalSurat: req.tanggalSurat && req.tanggalSurat !== '-' ? req.tanggalSurat : '',
+    });
     setShowForm(true);
+    
+    // Kalau ini mode revisi, scroll ke form
+    if (isRevision) {
+      setTimeout(() => {
+        const formEl = document.querySelector('.form-card');
+        if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
   };
 
   const openAdd = () => {
@@ -251,7 +365,11 @@ export default function PermintaanPage() {
   };
 
   const statusBadge = (s) => {
-    const cls = s === 'Menunggu' ? 'status-menunggu' : s === 'Diteruskan' ? 'status-diteruskan' : s === 'Disetujui' ? 'status-disetujui' : 'status-ditolak';
+    const cls = s === 'Menunggu' ? 'status-menunggu' 
+      : s === 'Diteruskan' ? 'status-diteruskan' 
+      : s === 'Disetujui' ? 'status-disetujui' 
+      : s === 'Revisi' ? 'status-revisi' 
+      : 'status-ditolak';
     return <span className={`status-badge ${cls}`}>{s}</span>;
   };
 
@@ -289,7 +407,18 @@ export default function PermintaanPage() {
               <div className="form-header"><h6><i className="bi bi-plus-circle me-2"></i>{editId ? 'Edit Permintaan' : 'Form Permintaan'}</h6><p>Isi form berikut untuk mengajukan permintaan tanda tangan</p></div>
               <div className="form-body">
                 <PermintaanForm form={form} setForm={setForm} user={user} divisi={divisi} jabatan={jabatan} jenisSurat={jenisSurat} signers={signers} departemenIM={departemenIM} onDocTypeChange={onDocTypeChange} onDeptChange={onDeptChange} onSignerChange={onSignerChange} />
-                <div className="mt-4 text-end"><button className="btn-primary-custom" onClick={submitForm}><i className="bi bi-send"></i>{editId ? 'Update' : 'Kirim Permintaan'}</button></div>
+                <div className="mt-4 text-end"><button className="btn-primary-custom" onClick={() => {
+                  // Cek apakah ini mode revisi (status masih Revisi)
+                  const currentReq = requests.find(r => r.id === editId);
+                  if (currentReq && currentReq.status === 'Revisi') {
+                    doSubmitRevision();
+                  } else {
+                    submitForm();
+                  }
+                }}>
+                  <i className="bi bi-send"></i>
+                  {editId ? (requests.find(r => r.id === editId)?.status === 'Revisi' ? 'Kirim Revisi' : 'Update') : 'Kirim Permintaan'}
+                </button></div>
               </div>
             </div>
           )}
@@ -310,6 +439,21 @@ export default function PermintaanPage() {
                 {r.status === 'Diteruskan' && <div className="hc-status-note note-diteruskan"><i className="bi bi-share me-1"></i>Diteruskan oleh <strong>{r.forwardedBy}</strong> kepada <strong>{r.targetSigner}</strong>.</div>}
                 {r.status === 'Disetujui' && <div className="hc-status-note note-disetujui"><i className="bi bi-check-circle me-1" style={{color:'var(--success)'}}></i>Disetujui oleh {r.approvedBy} pada {r.approvedAt}.</div>}
                 {r.status === 'Ditolak' && <div className="hc-status-note note-ditolak"><i className="bi bi-x-circle me-1"></i>Ditolak oleh {r.rejectedBy} pada {r.rejectedAt}.{r.rejectionReason && r.rejectionReason !== '-' ? ` Alasan: ${r.rejectionReason}` : ''}</div>}
+                {r.status === 'Revisi' && (
+                  <div className="hc-status-note" style={{ borderLeftColor: '#f59e0b', background: '#fffbeb' }}>
+                    <i className="bi bi-exclamation-triangle me-1" style={{ color: '#f59e0b' }}></i>
+                    Permintaan Anda perlu <strong>direvisi</strong>.
+                    {r.revisionNote && r.revisionNote !== '-' ? ` Catatan admin: ${r.revisionNote}` : ''}
+                    <br/>
+                    <button 
+                      className="btn-primary-custom mt-2"
+                      onClick={() => openEdit(r, true)}
+                      style={{ background: 'linear-gradient(135deg, #f59e0b, #f97316)' }}
+                    >
+                      <i className="bi bi-pencil-square"></i> Edit & Kirim Ulang
+                    </button>
+                  </div>
+                )}
                 <div className="hc-actions">
                   {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && r.status === 'Disetujui' && (
                     <>
@@ -345,7 +489,12 @@ export default function PermintaanPage() {
                       <td>{(page-1)*pageSize + i + 1}</td><td><strong>{r.requesterName}</strong></td><td>{r.division}</td><td>{r.requestType}</td><td>{r.documentType}</td><td>{r.documentNumber}</td>
                       <td style={{maxWidth:180,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} title={r.perihal}>{r.perihal}</td><td>{r.targetSigner}</td><td>{statusBadge(r.status)}</td><td style={{whiteSpace:'nowrap',fontSize:12}}>{r.createdAt}</td>
                       <td><div className="action-btns">
-                        {user.role === 'admin' && r.status === 'Menunggu' && (<><button className="btn-action btn-action-edit" title="Edit" onClick={() => openEdit(r)}><i className="bi bi-pen"></i></button><button className="btn-action btn-action-forward" title="Teruskan" onClick={() => doForward(r.id)}><i className="bi bi-share"></i></button><button className="btn-action btn-action-reject" title="Tolak" onClick={() => doReject(r.id)}><i className="bi bi-x"></i></button></>)}
+                        {user.role === 'admin' && r.status === 'Menunggu' && (<>
+                          <button className="btn-action btn-action-edit" title="Edit" onClick={() => openEdit(r)}><i className="bi bi-pen"></i></button>
+                          <button className="btn-action btn-action-forward" title="Teruskan" onClick={() => doForward(r.id)}><i className="bi bi-share"></i></button>
+                          <button className="btn-action btn-action-revise" title="Tandai Revisi" onClick={() => doRevise(r.id)} style={{ background: '#f59e0b', color: 'white' }}><i className="bi bi-arrow-repeat"></i></button>
+                          <button className="btn-action btn-action-reject" title="Tolak" onClick={() => doReject(r.id)}><i className="bi bi-x"></i></button>
+                        </>)}
                         {user.role === 'atasan' && r.status === 'Diteruskan' && (<><button className="btn-action btn-action-approve" title="Setujui" onClick={() => doApprove(r.id)}><i className="bi bi-check"></i></button><button className="btn-action btn-action-reject" title="Tolak" onClick={() => doReject(r.id)}><i className="bi bi-x"></i></button></>)}
                         {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && (
                           <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action" title="Buka File" style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
