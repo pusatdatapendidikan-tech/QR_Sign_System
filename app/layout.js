@@ -13,8 +13,8 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: 'QR Sign System - Sistem Permintaan Tanda Tangan Digital',
-  description: 'Sistem Permintaan Tanda Tangan Digital dengan QR Code',
+  title: 'SIPASTI - Sistem Persetujuan dan Administrasi Surat Terintegrasi',
+  description: 'Sistem Persetujuan dan Administrasi Surat Terintegrasi',
 };
 
 export default function RootLayout({ children }) {

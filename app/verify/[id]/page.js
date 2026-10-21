@@ -67,7 +67,7 @@ export default function VerifyPage() {
             <img src={data.logoUrl} alt="Logo" style={{ height:50, marginBottom:12, objectFit:'contain' }} />
           )}
           <h1 style={{ fontSize:20, fontWeight:800, color:'#166534', margin:0 }}>Dokumen Sah & Terverifikasi</h1>
-          <p style={{ fontSize:13, color:'#15803d', marginTop:4, fontWeight:500 }}>{data.companyName || 'Sistem Tanda Tangan Elektronik'}</p>
+          <p style={{ fontSize:13, color:'#15803d', marginTop:4, fontWeight:500 }}>SIPASTI - Sistem Persetujuan dan Administrasi Surat Terintegrasi</p>
         </div>
 
         {/* Kotak Nomor Surat */}
@@ -125,7 +125,7 @@ export default function VerifyPage() {
         )}
 
         <div style={{ marginTop:24, textAlign:'center', fontSize:11, color:'#94a3b8' }}>
-          Divalidasi secara otomatis oleh Sistem QR Sign
+          Divalidasi secara otomatis oleh SIPASTI
         </div>
       </div>
     </div>

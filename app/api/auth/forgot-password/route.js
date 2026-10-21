@@ -40,7 +40,7 @@ export async function POST(req) {
             </div>
             <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-radius: 0 0 8px 8px;">
               <p>Halo <strong>${data[i][3]}</strong>,</p>
-              <p>Anda menerima email ini karena ada permintaan reset password untuk akun Anda di QR Sign System.</p>
+              <p>Anda menerima email ini karena ada permintaan reset password untuk akun Anda di SIPASTI.</p>
               <p>Silakan klik tombol di bawah untuk membuat password baru:</p>
               <div style="text-align: center; margin: 24px 0;">
                 <a href="${resetUrl}" 
@@ -60,7 +60,7 @@ export async function POST(req) {
           </div>
         `;
         
-        await sendEmail({ to: email, subject: 'Reset Password - QR Sign System', html });
+        await sendEmail({ to: email, subject: 'Reset Password - SIPASTI', html });
         userFound = true;
         break;
       }

@@ -88,8 +88,8 @@ export default function LoginPage() {
             <div className="login-header">
               {/* LOGO TANPA FRAME/BOKS */}
               <img src={CONFIG.LOGO_URL} alt="Logo" style={{ height: '50px', width: 'auto', objectFit: 'contain', marginBottom: '8px' }} />
-              <h2>QR Sign System</h2>
-              <p className="sub">Sistem Permintaan Tanda Tangan Digital</p>
+              <h2>SIPASTI</h2>
+              <p className="sub">Sistem Persetujuan dan Administrasi Surat Terintegrasi</p>
             </div>
             <form onSubmit={doLogin}>
               <div className="mb-3">
