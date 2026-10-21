@@ -113,6 +113,11 @@ export default function LoginPage() {
                 {loading ? <><span className="spinner-border spinner-border-sm me-2"></span>Memproses...</> : <><i className="bi bi-box-arrow-in-right me-2"></i>Masuk</>}
               </button>
             </form>
+            <div className="text-end mb-2">
+              <a href="/forgot-password" style={{ color: '#1d4ed8', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                Lupa Password?
+              </a>
+            </div>
             <div className="text-center mt-3 pt-3" style={{borderTop:'1px solid #e2e8f0'}}>
               <span style={{color:'#64748b',fontSize:13}}>Belum punya akun? </span>
               <a href="#" onClick={e => {e.preventDefault(); setIsLogin(false);}} style={{color:'#1d4ed8',fontSize:13,fontWeight:600,textDecoration:'none'}}>Daftar Akun Baru</a>
