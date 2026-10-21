@@ -110,14 +110,23 @@ export default function PermintaanPage() {
     if (res.success) setRequests(res.data);
   };
 
-  const handleOpenDoc = async (id, url) => {
-    window.open(url, '_blank');
-    try {
-      await fetch(`/api/requests/${id}/read`, { method: 'POST' });
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, readByRequester: true } : r));
-      window.dispatchEvent(new Event('badge-update'));
-    } catch (e) {}
-  };
+const handleOpenDoc = async (id, url) => {
+  window.open(url, '_blank');
+  try {
+    await fetch(`/api/requests/${id}/read`, { method: 'POST' });
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, readByRequester: true } : r));
+    window.dispatchEvent(new Event('badge-update'));
+  } catch (e) {}
+};
+
+// Fungsi baru: Tandai sebagai dibaca tanpa buka URL (URL dibuka oleh anchor tag)
+const handleReadRequest = (id) => {
+  try {
+    fetch(`/api/requests/${id}/read`, { method: 'POST' });
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, readByRequester: true } : r));
+    window.dispatchEvent(new Event('badge-update'));
+  } catch (e) {}
+};
 
   const onDocTypeChange = (docType) => {
     if (docType === 'Sertifikat') {
@@ -455,31 +464,26 @@ const doSubmitRevision = async () => {
                   </div>
                 )}
                 <div className="hc-actions">
-                    {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && r.status === 'Disetujui' && (
-                      <a 
-                        href={`/api/requests/${r.id}/pdf`} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="btn-action" 
-                        title="Download PDF" 
-                        style={{ 
-                          background: 'linear-gradient(135deg, #dc2626, #ef4444)', 
-                          color: 'white', 
-                          border: 'none', 
-                          display: 'inline-flex', 
-                          alignItems: 'center', 
-                          gap: '4px',
-                          padding: '6px 14px',
-                          fontSize: 12,
-                          fontWeight: 600,
-                          borderRadius: 6,
-                          textDecoration: 'none'
-                        }}
-                      >
-                        <i className="bi bi-file-earmark-pdf"></i>
-                        Download PDF
-                      </a>
-                    )}
+                  {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && r.status === 'Disetujui' && (
+                    <a 
+                      href={`/api/requests/${r.id}/pdf`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="btn-action" 
+                      title="Download PDF"
+                      onClick={() => handleReadRequest(r.id)}
+                      style={{ 
+                        background: '#dc2626', 
+                        color: 'white', 
+                        border: 'none', 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center' 
+                      }}
+                    >
+                      <i className="bi bi-file-earmark-pdf"></i>
+                    </a>
+                  )}
                 </div>
               </div>
             ))
