@@ -310,9 +310,14 @@ export async function POST(req, { params }) {
                   ${qrWarning ? `<div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 6px; margin: 16px 0; color: #92400e;">${qrWarning.replace(/\\n/g, '<br/>')}</div>` : ''}
 
                   <div style="text-align: center; margin-top: 24px;">
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://qr-sign-systemgen.vercel.app'}/api/requests/${params.id}/pdf" 
+                      style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                      📄 Download PDF Dokumen
+                    </a>
+                    <br/><br/>
                     <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://qr-sign-systemgen.vercel.app'}/permintaan" 
-                      style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                      Lihat & Download Dokumen
+                      style="color: #1d4ed8; font-size: 13px; text-decoration: none; font-weight: 600;">
+                      Atau lihat detail di Dashboard →
                     </a>
                   </div>
                 </div>

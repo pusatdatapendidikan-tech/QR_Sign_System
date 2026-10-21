@@ -455,16 +455,31 @@ const doSubmitRevision = async () => {
                   </div>
                 )}
                 <div className="hc-actions">
-                  {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && r.status === 'Disetujui' && (
-                    <>
-                      <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action" title="Buka di Google Docs/Slides" style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/><path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/></svg>
-                      </button>
-                      <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && r.status === 'Disetujui' && (
+                      <a 
+                        href={`/api/requests/${r.id}/pdf`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="btn-action" 
+                        title="Download PDF" 
+                        style={{ 
+                          background: 'linear-gradient(135deg, #dc2626, #ef4444)', 
+                          color: 'white', 
+                          border: 'none', 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '4px',
+                          padding: '6px 14px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                          textDecoration: 'none'
+                        }}
+                      >
                         <i className="bi bi-file-earmark-pdf"></i>
+                        Download PDF
                       </a>
-                    </>
-                  )}
+                    )}
                 </div>
               </div>
             ))
@@ -497,12 +512,29 @@ const doSubmitRevision = async () => {
                         </>)}
                         {user.role === 'atasan' && r.status === 'Diteruskan' && (<><button className="btn-action btn-action-approve" title="Setujui" onClick={() => doApprove(r.id)}><i className="bi bi-check"></i></button><button className="btn-action btn-action-reject" title="Tolak" onClick={() => doReject(r.id)}><i className="bi bi-x"></i></button></>)}
                         {r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && (
-                          <button onClick={() => handleOpenDoc(r.id, r.fileUrl)} className="btn-action" title="Buka File" style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/><path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/></svg>
+                          <button 
+                            onClick={() => handleOpenDoc(r.id, r.fileUrl)} 
+                            className="btn-action" 
+                            title="Buka Source Google Docs (untuk editing)" 
+                            style={{ background: '#4285F4', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM6 20V4h5v7h7v9H6z"/>
+                              <path d="M8 13h8v1.5H8zm0 3h8v1.5H8z"/>
+                            </svg>
                           </button>
                         )}
                         {r.status === 'Disetujui' && r.fileUrl && r.fileUrl !== '-' && r.fileUrl !== 'AUTO_GENERATED' && (
-                          <a href={`/api/requests/${r.id}/pdf`} target="_blank" rel="noopener noreferrer" className="btn-action" title="Download PDF" style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><i className="bi bi-file-earmark-pdf" style={{fontSize:14}}></i></a>
+                          <a 
+                            href={`/api/requests/${r.id}/pdf`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="btn-action" 
+                            title="Download PDF untuk User" 
+                            style={{ background: '#dc2626', color: 'white', border: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          >
+                            <i className="bi bi-file-earmark-pdf" style={{fontSize:14}}></i>
+                          </a>
                         )}
                         {user.role === 'admin' && <button className="btn-action btn-action-delete" title="Hapus" onClick={() => doDelete(r.id)}><i className="bi bi-trash"></i></button>}
                       </div></td>
