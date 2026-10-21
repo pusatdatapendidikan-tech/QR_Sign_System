@@ -175,60 +175,82 @@ export async function POST(req, { params }) {
             // ==========================================
             // (Kode PDF Stamping batch yang lama tetap di sini jika diperlukan)
             
-            } else if (fileUrl.includes('docs.google.com')) {
-              // ==========================================
-              // ALUR B: GOOGLE DOCS (SURAT BIASA)
-              // ==========================================
-              const docs = google.docs({ version: 'v1', auth });
-              const docId = getDriveFileId(fileUrl);
+          } else if (fileUrl.includes('docs.google.com')) {
+            // ==========================================
+            // ALUR B: GOOGLE DOCS - COPY KE FOLDER PUSAT
+            // ==========================================
+            const docs = google.docs({ version: 'v1', auth });
+            const originalDocId = getDriveFileId(fileUrl);
+            
+            try {
+              // 1. Duplikasi file user ke folder pusat (SHARED_DRIVE_ID)
+              const copyRes = await drive.files.copy({
+                fileId: originalDocId,
+                supportsAllDrives: true,
+                requestBody: { 
+                  name: `Surat - ${data[i][1]} - ${docNumber}`,
+                  parents: [CONFIG.SHARED_DRIVE_ID] 
+                }
+              });
+              const newDocId = copyRes.data.id;
+              const newFileUrl = `https://docs.google.com/document/d/${newDocId}/edit`;
               
+              // 2. Beri akses anyone = reader (read-only) agar user tidak bisa edit dokumen final
+              await drive.permissions.create({
+                fileId: newDocId,
+                supportsAllDrives: true,
+                requestBody: { role: 'reader', type: 'anyone' }
+              });
+              
+              // 3. Update fileUrl di Sheet Requests (kolom 11 = index 10) pakai link baru
+              await updateCell(CONFIG.SHEETS.REQUESTS, r, 11, newFileUrl);
+              
+              // 4. Generate URL QR Code
               const qrUrl = verifyUrl;
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
               
-              try {
-                // 1. Ambil struktur dokumen SEBELUM modifikasi apapun
-                const docRes = await docs.documents.get({ documentId: docId });
+              // 5. Ambil struktur dokumen SEBELUM modifikasi apapun
+              const docRes = await docs.documents.get({ documentId: newDocId });
+              
+              // Fungsi recursive untuk cari teks di paragraf DAN tabel
+              function findTextInContent(content, searchText) {
+                if (!content) return null;
                 
-                // 2. Fungsi recursive untuk cari teks di paragraf DAN di dalam sel tabel
-                function findTextInContent(content, searchText) {
-                  if (!content) return null;
-                  
-                  for (const element of content) {
-                    // Cek di paragraf
-                    if (element.paragraph && element.paragraph.elements) {
-                      for (const el of element.paragraph.elements) {
-                        if (el.textRun && el.textRun.content.includes(searchText)) {
-                          const offset = el.textRun.content.indexOf(searchText);
-                          return {
-                            start: parseInt(el.startIndex) + offset,
-                            end: parseInt(el.startIndex) + offset + searchText.length
-                          };
-                        }
-                      }
-                    }
-                    // Cek di dalam tabel (recursive ke sel-selnya)
-                    if (element.table && element.table.tableRows) {
-                      for (const row of element.table.tableRows) {
-                        for (const cell of row.tableCells) {
-                          const found = findTextInContent(cell.content, searchText);
-                          if (found) return found;
-                        }
+                for (const element of content) {
+                  if (element.paragraph && element.paragraph.elements) {
+                    for (const el of element.paragraph.elements) {
+                      if (el.textRun && el.textRun.content.includes(searchText)) {
+                        const offset = el.textRun.content.indexOf(searchText);
+                        return {
+                          start: parseInt(el.startIndex) + offset,
+                          end: parseInt(el.startIndex) + offset + searchText.length
+                        };
                       }
                     }
                   }
-                  return null;
+                  if (element.table && element.table.tableRows) {
+                    for (const row of element.table.tableRows) {
+                      for (const cell of row.tableCells) {
+                        const found = findTextInContent(cell.content, searchText);
+                        if (found) return found;
+                      }
+                    }
+                  }
                 }
-                
-                // 3. Cari posisi {{QR_CODE}} di dokumen
-                const qrCodeLocation = findTextInContent(docRes.data.body.content, '{{QR_CODE}}');
-                console.log('Lokasi {{QR_CODE}}:', qrCodeLocation);
-                
-                // 4. Susun semua request dalam 1 batch
-                const requests = [];
-                
-                if (qrCodeLocation) {
-                  // a. Sisipkan gambar QR di awal teks {{QR_CODE}}
-                  requests.push({
+                return null;
+              }
+              
+              // 6. Cari lokasi {{QR_CODE}}
+              const qrCodeLocation = findTextInContent(docRes.data.body.content, '{{QR_CODE}}');
+              console.log('Lokasi {{QR_CODE}}:', qrCodeLocation);
+              
+              // 7. Susun request batch
+              const requests = [];
+              
+              if (qrCodeLocation) {
+                requests.push(
+                  // Sisipkan gambar QR
+                  {
                     insertInlineImage: {
                       location: { index: qrCodeLocation.start },
                       objectSize: {
@@ -237,41 +259,42 @@ export async function POST(req, { params }) {
                       },
                       uri: qrImageUrl
                     }
-                  });
-                  // b. Hapus teks {{QR_CODE}} (sudah bergeser +1 karena gambar)
-                  requests.push({
+                  },
+                  // Hapus teks {{QR_CODE}}
+                  {
                     deleteContentRange: {
                       range: { 
                         startIndex: qrCodeLocation.start + 1, 
                         endIndex: qrCodeLocation.end + 1 
                       }
                     }
-                  });
-                } else {
-                  console.warn('{{QR_CODE}} tidak ditemukan!');
-                  qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen, jadi QR Code tidak bisa disisipkan.';
-                }
-                
-                // c. Replace {{NO_SURAT}} dengan nomor surat
-                requests.push({
-                  replaceAllText: {
-                    containsText: { text: '{{NO_SURAT}}', matchCase: true },
-                    replaceText: docNumber
                   }
-                });
-                
-                // 5. Eksekusi semua request dalam 1 batch
-                await docs.documents.batchUpdate({
-                  documentId: docId,
-                  requestBody: { requests }
-                });
-                console.log('Berhasil update dokumen Google Docs.');
-                
-              } catch (docsErr) {
-                console.error('Gagal update Google Docs:', docsErr.message);
-                qrWarning = '\\n\\n⚠️ Peringatan: Gagal update dokumen Google Docs. ' + docsErr.message;
+                );
+              } else {
+                console.warn('{{QR_CODE}} tidak ditemukan!');
+                qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen.';
               }
+              
+              // Replace {{NO_SURAT}}
+              requests.push({
+                replaceAllText: {
+                  containsText: { text: '{{NO_SURAT}}', matchCase: true },
+                  replaceText: docNumber
+                }
+              });
+              
+              // 8. Eksekusi batch update di dokumen copy
+              await docs.documents.batchUpdate({
+                documentId: newDocId,
+                requestBody: { requests }
+              });
+              console.log('Berhasil update dokumen di folder pusat:', newFileUrl);
+              
+            } catch (docsErr) {
+              console.error('Gagal copy/update Google Docs:', docsErr.message);
+              qrWarning = '\\n\\n⚠️ Peringatan: Gagal memproses dokumen. ' + docsErr.message;
             }
+          }
         } catch (docError) {
           console.error('Gagal proses dokumen:', docError.message);
           qrWarning = '\\n\\n⚠️ Peringatan: Gagal memproses dokumen otomatis. ' + docError.message;
