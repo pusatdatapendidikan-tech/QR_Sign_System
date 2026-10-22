@@ -29,22 +29,23 @@ async function batchUpdateCells(sheetName, updates) {
   const sheets = getSheets();
   const spreadsheetId = getSpreadsheetId();
   
-  // Cari sheetId (numeric) untuk operasi batchUpdate
-  const meta = await sheets.spreadsheets.get({ spreadsheetId });
-  const sheet = meta.data.sheets.find(s => s.properties.title === sheetName);
-  if (!sheet) throw new Error(`Sheet ${sheetName} tidak ditemukan`);
-  
-  // Buat request untuk masing-masing cell update
-  const requests = updates.map(({ rowIndex, colIndex, value }) => {
+  // Pakai values.batchUpdate yang support A1 notation
+  const data = updates.map(({ rowIndex, colIndex, value }) => {
     const col = columnToLetter(colIndex);
     return {
-      updateCells: {
-        range: `${sheetName}!${col}${rowIndex}`,
-        fields: 'userEnteredValue',
-        rows: [{ values: [{ userEnteredValue: { stringValue: String(value) } }] }]
-      }
+      range: `${sheetName}!${col}${rowIndex}`,
+      values: [[String(value)]]
     };
   });
+  
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption: 'USER_ENTERED',
+      data: data
+    }
+  });
+}
   
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId,
