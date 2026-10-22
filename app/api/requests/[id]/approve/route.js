@@ -5,6 +5,7 @@ import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
 import { getWIBDate } from '@/lib/utils';
 import { google } from 'googleapis';
+import { getSpreadsheetId } from '@/lib/googleSheets';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Readable } from 'stream';
 
@@ -20,6 +21,48 @@ function formatTanggalID(dateStr) {
   if (isNaN(d.getTime())) return dateStr;
   const bln = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
   return `${d.getDate()} ${bln[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// Helper untuk batch update multiple cells sekaligus (hemat API call)
+async function batchUpdateCells(sheetName, updates) {
+  if (!updates || updates.length === 0) return;
+  const sheets = getSheets();
+  const spreadsheetId = getSpreadsheetId();
+  
+  // Cari sheetId (numeric) untuk operasi batchUpdate
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = meta.data.sheets.find(s => s.properties.title === sheetName);
+  if (!sheet) throw new Error(`Sheet ${sheetName} tidak ditemukan`);
+  
+  // Buat request untuk masing-masing cell update
+  const requests = updates.map(({ rowIndex, colIndex, value }) => {
+    const col = columnToLetter(colIndex);
+    return {
+      updateCells: {
+        range: `${sheetName}!${col}${rowIndex}`,
+        fields: 'userEnteredValue',
+        rows: [{ values: [{ userEnteredValue: { stringValue: String(value) } }] }]
+      }
+    };
+  });
+  
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: { requests }
+  });
+}
+
+// Note: columnToLetter harus di-import atau dideklarasikan di file ini juga
+// Kalau belum, tambahkan:
+function columnToLetter(column) {
+  let letter = '';
+  let temp = column;
+  while (temp > 0) {
+    let mod = (temp - 1) % 26;
+    letter = String.fromCharCode(65 + mod) + letter;
+    temp = Math.floor((temp - 1) / 26);
+  }
+  return letter;
 }
 
 export async function POST(req, { params }) {
@@ -44,19 +87,22 @@ export async function POST(req, { params }) {
         const departemen = data[i][22] || '';
         const verifyUrl = `https://qr-sign-systemgen.vercel.app/verify/${params.id}`; 
 
-        // 1. GENERATE NOMOR SURAT (Skip jika Sertifikat, akan pakai Batch)
+        // 1. GENERATE NOMOR SURAT (cukup generate nilai-nya saja, update dilakukan batch di section 2)
         if (docNumber === '-' && docType && docType !== '-' && docType !== 'Sertifikat') {
           try {
             const { generateDocNumber } = await import('@/lib/googleSheets');
             docNumber = await generateDocNumber(docType, departemen);
-            await updateCell(CONFIG.SHEETS.REQUESTS, r, 8, docNumber);
+            // Tidak perlu updateCell di sini, akan di-batch di section 2
           } catch (e) { console.error('Gagal generate nomor surat:', e); }
         }
 
-        // 2. Update Status di Sheets
-        await updateCell(CONFIG.SHEETS.REQUESTS, r, 13, 'Disetujui');
-        await updateCell(CONFIG.SHEETS.REQUESTS, r, 14, approverName);
-        await updateCell(CONFIG.SHEETS.REQUESTS, r, 15, getWIBDate());
+        // 2. Update Status di Sheets (batch 4 cells dalam 1 request API)
+        await batchUpdateCells(CONFIG.SHEETS.REQUESTS, [
+          { rowIndex: r, colIndex: 13, value: 'Disetujui' },
+          { rowIndex: r, colIndex: 14, value: approverName },
+          { rowIndex: r, colIndex: 15, value: getWIBDate() },
+          { rowIndex: r, colIndex: 8, value: docNumber },  // Update nomor surat sekalian
+        ]);
 
         // 3. Update Sheet Jenis Surat
         if (docType && docType !== '-') {

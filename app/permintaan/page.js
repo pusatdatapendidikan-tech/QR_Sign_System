@@ -208,11 +208,21 @@ const handleReadRequest = (id) => {
       });
   };
 
-  const doApprove = async (id) => {
-    Swal.fire({ title:'Setujui Permintaan?', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Setujui', cancelButtonText:'Batal', confirmButtonColor:'#059669' })
-      .then(async r => {
-        if (r.isConfirmed) {
-          Swal.fire({ title:'Memproses Persetujuan...', html:'Mohon tunggu, sistem sedang membuat dokumen...', allowOutsideClick:false, didOpen: () => Swal.showLoading() });
+const doApprove = async (id) => {
+  // CEK: Kalau lagi loading, jangan lanjutkan
+  if (document.querySelector('.swal2-show')) return;
+  
+  Swal.fire({ title:'Setujui Permintaan?', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Setujui', cancelButtonText:'Batal', confirmButtonColor:'#059669' })
+    .then(async r => {
+      if (r.isConfirmed) {
+        Swal.fire({ 
+          title:'Memproses Persetujuan...', 
+          html:'Mohon tunggu, sistem sedang membuat dokumen...', 
+          allowOutsideClick:false, 
+          allowEscapeKey: false,
+          allowEnterKey: false,
+          didOpen: () => Swal.showLoading() 
+        });
           const res = await fetch(`/api/requests/${id}/approve`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ approverName: user.name }) }).then(r => r.json());
           Swal.close();
           if (res.success) { Swal.fire({icon:'success', title:'Disetujui', text:res.message, timer:2000, showConfirmButton:false}); loadRequests(user); window.dispatchEvent(new Event('badge-update')); }
