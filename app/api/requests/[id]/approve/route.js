@@ -47,12 +47,6 @@ async function batchUpdateCells(sheetName, updates) {
   });
 }
   
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId,
-    requestBody: { requests }
-  });
-}
-
 // Note: columnToLetter harus di-import atau dideklarasikan di file ini juga
 // Kalau belum, tambahkan:
 function columnToLetter(column) {
