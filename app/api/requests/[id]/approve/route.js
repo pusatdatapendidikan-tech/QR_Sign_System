@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth, generateBatchDocNumbers } from '@/lib/googleSheets';
+import { ensureSheets, readSheet, updateCell, clearSheetCache, getAuth, generateBatchDocNumbers, getSheets, getSpreadsheetId } from '@/lib/googleSheets';
 import { sendEmail } from '@/lib/email';
 import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
