@@ -216,160 +216,118 @@ export async function POST(req, { params }) {
             // ==========================================
             // (Kode PDF Stamping batch yang lama tetap di sini jika diperlukan)
             
-          } else if (fileUrl.includes('docs.google.com')) {
-            // ==========================================
-            // ALUR B: GOOGLE DOCS - COPY KE FOLDER PUSAT (FALLBACK KE ORIGINAL)
-            // ==========================================
-            console.log('=== ALUR B: GOOGLE DOCS ===');
-            console.log('SHARED_DRIVE_ID:', CONFIG.SHARED_DRIVE_ID);
-            
-            const docs = google.docs({ version: 'v1', auth });
-            const originalDocId = getDriveFileId(fileUrl);
-            
-            // Tentukan file mana yang akan di-edit
-            let docIdToEdit = originalDocId;
-            let newFileUrl = fileUrl;
-            let isCopiedToCentral = false;
-            
-            // === STEP 1: COBA COPY DULU KE FOLDER PUSAT ===
-            if (CONFIG.SHARED_DRIVE_ID) {
+            } else if (fileUrl.includes('docs.google.com')) {
+              // ==========================================
+              // ALUR B: GOOGLE DOCS - ADD FILE KE FOLDER ADMIN (NO COPY)
+              // ==========================================
+              console.log('=== ALUR B: GOOGLE DOCS - ADD TO ADMIN FOLDER ===');
+              console.log('SHARED_DRIVE_ID:', CONFIG.SHARED_DRIVE_ID);
+              
+              const docs = google.docs({ version: 'v1', auth });
+              const originalDocId = getDriveFileId(fileUrl);
+              console.log('Original Doc ID:', originalDocId);
+              
+              // === STEP 1: ADD FILE KE FOLDER ADMIN ===
+              if (CONFIG.SHARED_DRIVE_ID) {
+                try {
+                  console.log('Menambahkan file ke folder admin...');
+                  
+                  // Pakai drive.files.update dengan addParents
+                  // Ini tidak bikin file baru, hanya nambah parent folder
+                  await drive.files.update({
+                    fileId: originalDocId,
+                    addParents: CONFIG.SHARED_DRIVE_ID,
+                    supportsAllDrives: true,
+                    fields: 'id, name, parents'
+                  });
+                  
+                  console.log('✅ File ditambahkan ke folder admin (tanpa copy)');
+                } catch (addErr) {
+                  console.warn('⚠️ Gagal add ke folder admin:', addErr.message);
+                  qrWarning = '\\n\\n⚠️ Catatan: Gagal menambahkan file ke folder admin. ' + addErr.message;
+                }
+              } else {
+                console.warn('SHARED_DRIVE_ID belum diset di config');
+              }
+              
+              // === STEP 2: EDIT DOKUMEN (QR & NOMOR SURAT) ===
               try {
-                console.log('Mencoba copy file ke folder pusat...');
-                const copyRes = await drive.files.copy({
-                  fileId: originalDocId,
-                  supportsAllDrives: true,
-                  requestBody: { 
-                    name: `Surat - ${data[i][1]} - ${docNumber}`,
-                    parents: [CONFIG.SHARED_DRIVE_ID] 
+                const qrUrl = verifyUrl;
+                const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
+                
+                // Ambil struktur dokumen
+                const docRes = await docs.documents.get({ documentId: originalDocId });
+                
+                // Fungsi recursive cari {{QR_CODE}}
+                function findTextInContent(content, searchText) {
+                  if (!content) return null;
+                  for (const element of content) {
+                    if (element.paragraph && element.paragraph.elements) {
+                      for (const el of element.paragraph.elements) {
+                        if (el.textRun && el.textRun.content.includes(searchText)) {
+                          const offset = el.textRun.content.indexOf(searchText);
+                          return {
+                            start: parseInt(el.startIndex) + offset,
+                            end: parseInt(el.startIndex) + offset + searchText.length
+                          };
+                        }
+                      }
+                    }
+                    if (element.table && element.table.tableRows) {
+                      for (const row of element.table.tableRows) {
+                        for (const cell of row.tableCells) {
+                          const found = findTextInContent(cell.content, searchText);
+                          if (found) return found;
+                        }
+                      }
+                    }
+                  }
+                  return null;
+                }
+                
+                const qrCodeLocation = findTextInContent(docRes.data.body.content, '{{QR_CODE}}');
+                console.log('Lokasi {{QR_CODE}}:', qrCodeLocation);
+                
+                const requests = [];
+                
+                if (qrCodeLocation) {
+                  requests.push(
+                    { insertInlineImage: {
+                      location: { index: qrCodeLocation.start },
+                      objectSize: { height: { magnitude: 80, unit: 'PT' }, width: { magnitude: 80, unit: 'PT' } },
+                      uri: qrImageUrl
+                    }},
+                    { deleteContentRange: {
+                      range: { startIndex: qrCodeLocation.start + 1, endIndex: qrCodeLocation.end + 1 }
+                    }}
+                  );
+                  console.log('✅ QR Code akan disisipkan');
+                } else {
+                  console.warn('❌ {{QR_CODE}} tidak ditemukan!');
+                  qrWarning += '\\n\\n⚠️ Teks {{QR_CODE}} tidak ditemukan di dokumen.';
+                }
+                
+                // Replace {{NO_SURAT}}
+                requests.push({
+                  replaceAllText: {
+                    containsText: { text: '{{NO_SURAT}}', matchCase: true },
+                    replaceText: docNumber
                   }
                 });
+                console.log('✅ Nomor surat akan diganti:', docNumber);
                 
-                docIdToEdit = copyRes.data.id;
-                newFileUrl = `https://docs.google.com/document/d/${docIdToEdit}/edit`;
-                isCopiedToCentral = true;
-                console.log('✅ Copy berhasil! File di folder pusat:', newFileUrl);
+                // Eksekusi batch update
+                await docs.documents.batchUpdate({
+                  documentId: originalDocId,
+                  requestBody: { requests }
+                });
+                console.log('✅ Update dokumen selesai!');
                 
-                // Beri akses reader (read-only) ke anyone
-                try {
-                  await drive.permissions.create({
-                    fileId: docIdToEdit,
-                    supportsAllDrives: true,
-                    requestBody: { role: 'reader', type: 'anyone' }
-                  });
-                } catch (permErr) {
-                  console.warn('Gagal set permission reader:', permErr.message);
-                }
-                
-                // Update fileUrl di sheet Requests
-                await updateCell(CONFIG.SHEETS.REQUESTS, r, 11, newFileUrl);
-                
-              } catch (copyErr) {
-                console.warn('⚠️ Copy gagal, fallback ke edit original file:', copyErr.message);
-                qrWarning = '\\n\\n⚠️ Catatan: Gagal copy ke folder pusat (' + copyErr.message + '). Dokumen diproses pada file asli user.';
-                // Tetap pakai original file
-                docIdToEdit = originalDocId;
-                newFileUrl = fileUrl;
+              } catch (editErr) {
+                console.error('Gagal edit dokumen:', editErr.message);
+                qrWarning += '\\n\\n⚠️ Peringatan: Gagal edit dokumen. ' + editErr.message;
               }
-            } else {
-              console.warn('SHARED_DRIVE_ID belum diset, edit original file langsung');
             }
-            
-            // === STEP 2: EDIT DOKUMEN (sudah pasti jalan) ===
-            try {
-              const qrUrl = verifyUrl;
-              const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
-              
-              // Ambil struktur dokumen
-              const docRes = await docs.documents.get({ documentId: docIdToEdit });
-              
-              // Fungsi recursive untuk cari teks
-              function findTextInContent(content, searchText) {
-                if (!content) return null;
-                for (const element of content) {
-                  if (element.paragraph && element.paragraph.elements) {
-                    for (const el of element.paragraph.elements) {
-                      if (el.textRun && el.textRun.content.includes(searchText)) {
-                        const offset = el.textRun.content.indexOf(searchText);
-                        return {
-                          start: parseInt(el.startIndex) + offset,
-                          end: parseInt(el.startIndex) + offset + searchText.length
-                        };
-                      }
-                    }
-                  }
-                  if (element.table && element.table.tableRows) {
-                    for (const row of element.table.tableRows) {
-                      for (const cell of row.tableCells) {
-                        const found = findTextInContent(cell.content, searchText);
-                        if (found) return found;
-                      }
-                    }
-                  }
-                }
-                return null;
-              }
-              
-              const qrCodeLocation = findTextInContent(docRes.data.body.content, '{{QR_CODE}}');
-              console.log('Lokasi {{QR_CODE}}:', qrCodeLocation);
-              
-              const requests = [];
-              
-              if (qrCodeLocation) {
-                requests.push(
-                  // Sisipkan gambar QR
-                  {
-                    insertInlineImage: {
-                      location: { index: qrCodeLocation.start },
-                      objectSize: {
-                        height: { magnitude: 80, unit: 'PT' },
-                        width: { magnitude: 80, unit: 'PT' }
-                      },
-                      uri: qrImageUrl
-                    }
-                  },
-                  // Hapus teks {{QR_CODE}}
-                  {
-                    deleteContentRange: {
-                      range: { 
-                        startIndex: qrCodeLocation.start + 1, 
-                        endIndex: qrCodeLocation.end + 1 
-                      }
-                    }
-                  }
-                );
-                console.log('✅ QR Code akan disisipkan');
-              } else {
-                console.warn('❌ {{QR_CODE}} tidak ditemukan di dokumen!');
-                qrWarning += '\\n\\n⚠️ Teks {{QR_CODE}} tidak ditemukan di dokumen.';
-              }
-              
-              // Replace {{NO_SURAT}}
-              requests.push({
-                replaceAllText: {
-                  containsText: { text: '{{NO_SURAT}}', matchCase: true },
-                  replaceText: docNumber
-                }
-              });
-              console.log('✅ Nomor surat akan diganti:', docNumber);
-              
-              // Eksekusi batch update
-              await docs.documents.batchUpdate({
-                documentId: docIdToEdit,
-                requestBody: { requests }
-              });
-              console.log('✅ Update dokumen selesai!');
-              
-              if (isCopiedToCentral) {
-                console.log('✅ Dokumen tersimpan di folder pusat:', newFileUrl);
-              } else {
-                console.log('⚠️ Dokumen di-edit di file asli user (fallback)');
-              }
-              
-            } catch (editErr) {
-              console.error('Gagal edit dokumen:', editErr.message);
-              qrWarning += '\\n\\n⚠️ Peringatan: Gagal edit dokumen. ' + editErr.message;
-            }
-          }
         } catch (docError) {
           console.error('Gagal proses dokumen:', docError.message);
           qrWarning = '\\n\\n⚠️ Peringatan: Gagal memproses dokumen otomatis. ' + docError.message;
