@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureSheets, readSheet, updateCell, deleteRow, clearSheetCache } from '@/lib/googleSheets';
 import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
+import { logActivity } from '@/lib/activityLog';
 
 export async function PUT(req, { params }) {
   try {

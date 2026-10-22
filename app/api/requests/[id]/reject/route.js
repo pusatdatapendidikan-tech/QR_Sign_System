@@ -3,6 +3,7 @@ import { ensureSheets, readSheet, updateCell, clearSheetCache } from '@/lib/goog
 import { CONFIG } from '@/lib/config';
 import { generateId, formatDate, generateDocumentNumber, getWIBDate } from '@/lib/utils';
 import { getSession } from '@/lib/auth';
+import { logActivity } from '@/lib/activityLog';
 
 export async function POST(req, { params }) {
   try {
