@@ -5,7 +5,6 @@ import { CONFIG } from '@/lib/config';
 import { getSession } from '@/lib/auth';
 import { getWIBDate } from '@/lib/utils';
 import { google } from 'googleapis';
-import { getSpreadsheetId } from '@/lib/googleSheets';
 import { logActivity } from '@/lib/activityLog';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Readable } from 'stream';
