@@ -28,6 +28,15 @@ export async function POST(req, { params }) {
         await updateCell(CONFIG.SHEETS.REQUESTS, rowIndex, 22, false);
         
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
+
+        await logActivity({
+          requestId: params.id,
+          actor: session.user.name,
+          actorRole: 'admin',
+          activityType: 'CATATAN_PEMERIKSAAN',
+          description: `Permintaan revisi oleh ${session.user.name}`,
+          details: `Catatan: ${revisionNote || '-'}`
+        });
         
         return NextResponse.json({ 
           success: true, 

@@ -74,6 +74,15 @@ export async function POST(req, { params }) {
         } catch (emailErr) {
           console.error('Gagal kirim email ke atasan:', emailErr.message);
         }
+
+        await logActivity({
+          requestId: params.id,
+          actor: forwarderName,
+          actorRole: 'admin',
+          activityType: 'PENERUSKAN',
+          description: `Diteruskan ke ${targetSigner} oleh ${forwarderName}`,
+          details: `Tujuan: ${targetSigner}`
+        });
         
         return NextResponse.json({ success: true, message: 'Permintaan berhasil diteruskan' });
       }

@@ -55,6 +55,17 @@ export async function PUT(req, { params }) {
         }
         
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
+
+        await logActivity({
+          requestId: params.id,
+          actor: session.user.name,
+          actorRole: session.user.role,
+          activityType: 'PERUBAHAN_DOKUMEN',
+          description: isRevisionMode 
+            ? `Revisi dokumen oleh ${session.user.name}` 
+            : `Edit permintaan oleh ${session.user.name}`,
+          details: `Field: ${Object.keys(d).join(', ')}`
+        });
         
         return NextResponse.json({ 
           success: true, 
@@ -83,6 +94,14 @@ export async function DELETE(req, { params }) {
       if (data[i][0] === params.id) {
         await deleteRow(CONFIG.SHEETS.REQUESTS, i + 1);
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
+        await logActivity({
+          requestId: params.id,
+          actor: session.user.name,
+          actorRole: 'admin',
+          activityType: 'PEMBATALAN',
+          description: `Permintaan dibatalkan/dihapus oleh ${session.user.name}`,
+          details: `Request ID: ${params.id}`
+        });
         return NextResponse.json({ success: true, message: 'Data berhasil dihapus' });
       }
     }

@@ -355,6 +355,24 @@ export async function POST(req, { params }) {
         } catch (emailErr) {
           console.error('Gagal kirim email ke user:', emailErr.message);
         }
+
+        await logActivity({
+          requestId: params.id,
+          actor: approverName,
+          actorRole: 'atasan',
+          activityType: 'KEPUTUSAN_PIMPINAN',
+          description: `Disetujui oleh ${approverName} (${data[i][9]})`,
+          details: qrWarning ? 'Dengan peringatan' : 'Sukses'
+        });
+
+        await logActivity({
+          requestId: params.id,
+          actor: 'Sistem',
+          actorRole: 'system',
+          activityType: 'PENERBITAN_NOMOR',
+          description: `Nomor surat ${docNumber} diterbitkan`,
+          details: `Jenis: ${docType}`
+        });
         return NextResponse.json({ success: true, message: `Permintaan berhasil disetujui dengan Nomor Surat: ${docNumber}${qrWarning}` });
       }
     }

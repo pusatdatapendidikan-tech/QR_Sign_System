@@ -27,6 +27,15 @@ export async function POST(req, { params }) {
         
         // Bersihkan cache
         clearSheetCache(CONFIG.SHEETS.REQUESTS);
+
+        await logActivity({
+          requestId: params.id,
+          actor: rejecterName,
+          actorRole: session.user.role,
+          activityType: 'KEPUTUSAN_PIMPINAN',
+          description: `Ditolak oleh ${rejecterName}`,
+          details: `Alasan: ${reason || '-'}`
+        });
         
         return NextResponse.json({ success: true, message: 'Permintaan ditolak' });
       }

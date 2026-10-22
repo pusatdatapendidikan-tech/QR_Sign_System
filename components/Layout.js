@@ -60,6 +60,7 @@ export default function Layout({ user, children }) {
   if (user?.role === 'admin') {
     navItems.push({ id:'registrasi', label:'Persetujuan Akun', icon:'bi-person-check', isAdmin:true, path:'/registrasi' });
     navItems.push({ id:'users', label:'Manajemen User', icon:'bi-people', isAdmin:true, path:'/users' });
+    navItems.push({ id:'activity', label:'Riwayat Aktivitas', icon:'bi-clock-history', isAdmin:true, path:'/activity' });
   }
 
   const doLogout = async () => {
@@ -78,7 +79,13 @@ export default function Layout({ user, children }) {
     else setCollapsed(!collapsed);
   };
 
-  const pageTitle = { dashboard:'Dashboard', permintaan:'Permintaan', registrasi:'Persetujuan Akun', users:'Manajemen User' }[currentPage] || 'Dashboard';
+  const pageTitle = { 
+  dashboard:'Dashboard', 
+  permintaan:'Permintaan', 
+  registrasi:'Persetujuan Akun', 
+  users:'Manajemen User',
+  activity:'Riwayat Aktivitas'
+}[currentPage] || 'Dashboard';
 
   return (
     <>
@@ -86,7 +93,7 @@ export default function Layout({ user, children }) {
       <nav className={`sidebar ${collapsed ? 'collapsed' : ''} ${sidebarOpen ? 'show' : ''}`}>
         <div className="sidebar-brand">
           <img src={CONFIG.LOGO_URL} alt="Logo" style={{ height: '30px', width: 'auto', objectFit: 'contain', marginRight: '12px', flexShrink: 0 }} />
-          <div><h6>SIPASTI</h6><small>Signature System</small></div>
+          <div><h6>SIPASTI</h6><small>Sistem Persetujuan Surat</small></div>
         </div>
         <div className="sidebar-nav">
           <div className="nav-label">Menu Utama</div>

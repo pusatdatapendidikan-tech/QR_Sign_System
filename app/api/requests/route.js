@@ -95,6 +95,15 @@ export async function POST(req) {
         departemen, 'Menunggu', getWIBDate(),
       ]);
     }
+
+    await logActivity({
+      requestId: id,
+      actor: d.requesterName,
+      actorRole: 'user',
+      activityType: 'PENGAJUAN',
+      description: `Pengajuan ${docType} oleh ${d.requesterName}`,
+      details: `Perihal: ${d.perihal || '-'} | Tujuan: ${d.targetSigner || '-'}`
+    });
     
     // Bersihkan cache agar data baru langsung terbaca
     clearSheetCache(CONFIG.SHEETS.REQUESTS);
