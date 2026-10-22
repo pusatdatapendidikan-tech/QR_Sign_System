@@ -218,45 +218,73 @@ export async function POST(req, { params }) {
             
           } else if (fileUrl.includes('docs.google.com')) {
             // ==========================================
-            // ALUR B: GOOGLE DOCS - COPY KE FOLDER PUSAT
+            // ALUR B: GOOGLE DOCS - COPY KE FOLDER PUSAT (FALLBACK KE ORIGINAL)
             // ==========================================
+            console.log('=== ALUR B: GOOGLE DOCS ===');
+            console.log('SHARED_DRIVE_ID:', CONFIG.SHARED_DRIVE_ID);
+            
             const docs = google.docs({ version: 'v1', auth });
             const originalDocId = getDriveFileId(fileUrl);
             
-            try {
-              // 1. Duplikasi file user ke folder pusat (SHARED_DRIVE_ID)
-              const copyRes = await drive.files.copy({
-                fileId: originalDocId,
-                supportsAllDrives: true,
-                requestBody: { 
-                  name: `Surat - ${data[i][1]} - ${docNumber}`,
-                  parents: [CONFIG.SHARED_DRIVE_ID] 
+            // Tentukan file mana yang akan di-edit
+            let docIdToEdit = originalDocId;
+            let newFileUrl = fileUrl;
+            let isCopiedToCentral = false;
+            
+            // === STEP 1: COBA COPY DULU KE FOLDER PUSAT ===
+            if (CONFIG.SHARED_DRIVE_ID) {
+              try {
+                console.log('Mencoba copy file ke folder pusat...');
+                const copyRes = await drive.files.copy({
+                  fileId: originalDocId,
+                  supportsAllDrives: true,
+                  requestBody: { 
+                    name: `Surat - ${data[i][1]} - ${docNumber}`,
+                    parents: [CONFIG.SHARED_DRIVE_ID] 
+                  }
+                });
+                
+                docIdToEdit = copyRes.data.id;
+                newFileUrl = `https://docs.google.com/document/d/${docIdToEdit}/edit`;
+                isCopiedToCentral = true;
+                console.log('✅ Copy berhasil! File di folder pusat:', newFileUrl);
+                
+                // Beri akses reader (read-only) ke anyone
+                try {
+                  await drive.permissions.create({
+                    fileId: docIdToEdit,
+                    supportsAllDrives: true,
+                    requestBody: { role: 'reader', type: 'anyone' }
+                  });
+                } catch (permErr) {
+                  console.warn('Gagal set permission reader:', permErr.message);
                 }
-              });
-              const newDocId = copyRes.data.id;
-              const newFileUrl = `https://docs.google.com/document/d/${newDocId}/edit`;
-              
-              // 2. Beri akses anyone = reader (read-only) agar user tidak bisa edit dokumen final
-              await drive.permissions.create({
-                fileId: newDocId,
-                supportsAllDrives: true,
-                requestBody: { role: 'reader', type: 'anyone' }
-              });
-              
-              // 3. Update fileUrl di Sheet Requests (kolom 11 = index 10) pakai link baru
-              await updateCell(CONFIG.SHEETS.REQUESTS, r, 11, newFileUrl);
-              
-              // 4. Generate URL QR Code
+                
+                // Update fileUrl di sheet Requests
+                await updateCell(CONFIG.SHEETS.REQUESTS, r, 11, newFileUrl);
+                
+              } catch (copyErr) {
+                console.warn('⚠️ Copy gagal, fallback ke edit original file:', copyErr.message);
+                qrWarning = '\\n\\n⚠️ Catatan: Gagal copy ke folder pusat (' + copyErr.message + '). Dokumen diproses pada file asli user.';
+                // Tetap pakai original file
+                docIdToEdit = originalDocId;
+                newFileUrl = fileUrl;
+              }
+            } else {
+              console.warn('SHARED_DRIVE_ID belum diset, edit original file langsung');
+            }
+            
+            // === STEP 2: EDIT DOKUMEN (sudah pasti jalan) ===
+            try {
               const qrUrl = verifyUrl;
               const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrUrl)}&color=000000&bgcolor=FFFFFF&ecc=H`;
               
-              // 5. Ambil struktur dokumen SEBELUM modifikasi apapun
-              const docRes = await docs.documents.get({ documentId: newDocId });
+              // Ambil struktur dokumen
+              const docRes = await docs.documents.get({ documentId: docIdToEdit });
               
-              // Fungsi recursive untuk cari teks di paragraf DAN tabel
+              // Fungsi recursive untuk cari teks
               function findTextInContent(content, searchText) {
                 if (!content) return null;
-                
                 for (const element of content) {
                   if (element.paragraph && element.paragraph.elements) {
                     for (const el of element.paragraph.elements) {
@@ -281,11 +309,9 @@ export async function POST(req, { params }) {
                 return null;
               }
               
-              // 6. Cari lokasi {{QR_CODE}}
               const qrCodeLocation = findTextInContent(docRes.data.body.content, '{{QR_CODE}}');
               console.log('Lokasi {{QR_CODE}}:', qrCodeLocation);
               
-              // 7. Susun request batch
               const requests = [];
               
               if (qrCodeLocation) {
@@ -311,9 +337,10 @@ export async function POST(req, { params }) {
                     }
                   }
                 );
+                console.log('✅ QR Code akan disisipkan');
               } else {
-                console.warn('{{QR_CODE}} tidak ditemukan!');
-                qrWarning = '\\n\\n⚠️ Peringatan: Teks {{QR_CODE}} tidak ditemukan di dokumen.';
+                console.warn('❌ {{QR_CODE}} tidak ditemukan di dokumen!');
+                qrWarning += '\\n\\n⚠️ Teks {{QR_CODE}} tidak ditemukan di dokumen.';
               }
               
               // Replace {{NO_SURAT}}
@@ -323,17 +350,24 @@ export async function POST(req, { params }) {
                   replaceText: docNumber
                 }
               });
+              console.log('✅ Nomor surat akan diganti:', docNumber);
               
-              // 8. Eksekusi batch update di dokumen copy
+              // Eksekusi batch update
               await docs.documents.batchUpdate({
-                documentId: newDocId,
+                documentId: docIdToEdit,
                 requestBody: { requests }
               });
-              console.log('Berhasil update dokumen di folder pusat:', newFileUrl);
+              console.log('✅ Update dokumen selesai!');
               
-            } catch (docsErr) {
-              console.error('Gagal copy/update Google Docs:', docsErr.message);
-              qrWarning = '\\n\\n⚠️ Peringatan: Gagal memproses dokumen. ' + docsErr.message;
+              if (isCopiedToCentral) {
+                console.log('✅ Dokumen tersimpan di folder pusat:', newFileUrl);
+              } else {
+                console.log('⚠️ Dokumen di-edit di file asli user (fallback)');
+              }
+              
+            } catch (editErr) {
+              console.error('Gagal edit dokumen:', editErr.message);
+              qrWarning += '\\n\\n⚠️ Peringatan: Gagal edit dokumen. ' + editErr.message;
             }
           }
         } catch (docError) {
